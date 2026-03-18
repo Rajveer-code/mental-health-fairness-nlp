@@ -1,0 +1,30 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Environments
+.env
+.venv/
+env/
+
+# Data (never commit raw data to GitHub)
+data/raw/
+data/processed/
+data/splits/
+
+# Model weights (too large for GitHub)
+outputs/models/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

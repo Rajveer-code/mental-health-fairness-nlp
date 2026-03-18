@@ -1,0 +1,25 @@
+﻿models:
+  bert: "bert-base-uncased"
+  roberta: "roberta-base"
+  mental_bert: "mental/mental-bert-base-uncased"
+  mental_roberta: "mental/mental-roberta-base-uncased"
+
+training:
+  max_length: 128
+  batch_size: 32
+  learning_rate: 2.0e-5
+  epochs: 5
+  seed: 42
+
+fairness:
+  alpha: 0.05
+  min_group_size: 100
+  ece_bins: 10
+
+paths:
+  raw_data: "data/raw/"
+  processed: "data/processed/"
+  splits: "data/splits/"
+  models: "outputs/models/"
+  results: "outputs/results/"
+  figures: "outputs/figures/"
