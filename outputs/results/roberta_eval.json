@@ -1,0 +1,41 @@
+{
+  "kaggle": {
+    "accuracy": 0.9364,
+    "f1_macro": 0.883,
+    "f1_weighted": 0.9369,
+    "auc_macro": 0.9865,
+    "f1_per_class": {
+      "normal": 0.9497,
+      "depression": 0.963,
+      "anxiety": 0.8799,
+      "stress": 0.7396
+    },
+    "classification_report": "              precision    recall  f1-score   support\n\n      normal       0.96      0.94      0.95      2188\n  depression       0.96      0.96      0.96      4314\n     anxiety       0.88      0.88      0.88       569\n      stress       0.72      0.76      0.74       549\n\n    accuracy                           0.94      7620\n   macro avg       0.88      0.89      0.88      7620\nweighted avg       0.94      0.94      0.94      7620\n"
+  },
+  "reddit": {
+    "accuracy": 0.7534,
+    "f1_macro": 0.2976,
+    "f1_weighted": 0.7057,
+    "auc_macro": 0.6289,
+    "f1_per_class": {
+      "normal": 0.8707,
+      "depression": 0.1554,
+      "anxiety": 0.1395,
+      "stress": 0.0248
+    },
+    "classification_report": "              precision    recall  f1-score   support\n\n      normal       0.82      0.93      0.87      5010\n  depression       0.15      0.17      0.16       420\n     anxiety       0.24      0.10      0.14       152\n      stress       0.17      0.01      0.02       748\n\n    accuracy                           0.75      6330\n   macro avg       0.34      0.30      0.30      6330\nweighted avg       0.68      0.75      0.71      6330\n"
+  },
+  "twitter": {
+    "accuracy": 0.4603,
+    "f1_macro": 0.2844,
+    "f1_weighted": 0.4031,
+    "auc_macro": 0.603,
+    "f1_per_class": {
+      "normal": 0.5858,
+      "depression": 0.4468,
+      "anxiety": 0.0955,
+      "stress": 0.0096
+    },
+    "classification_report": "              precision    recall  f1-score   support\n\n      normal       0.53      0.66      0.59      1258\n  depression       0.37      0.55      0.45       867\n     anxiety       0.78      0.05      0.10       354\n      stress       0.17      0.00      0.01       404\n\n    accuracy                           0.46      2883\n   macro avg       0.46      0.32      0.28      2883\nweighted avg       0.46      0.46      0.40      2883\n"
+  }
+}
