@@ -264,6 +264,7 @@ def train_model(model_key: str):
         model_name,
         num_labels=NUM_LABELS,
         ignore_mismatched_sizes=True,
+        problem_type="single_label_classification",
     )
     model = model.to(DEVICE)
 
