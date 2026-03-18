@@ -91,10 +91,6 @@ def get_prediction_function(model, tokenizer):
 
 
 def run_shap_analysis(model_key, model_path):
-    """
-    Run SHAP analysis for one model across all platforms.
-    Uses shap.Explainer with the tokenizer-aware partition explainer.
-    """
     print(f"\n  Loading model: {model_key}")
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model     = AutoModelForSequenceClassification.from_pretrained(
@@ -105,15 +101,13 @@ def run_shap_analysis(model_key, model_path):
     ).to(DEVICE)
     model.eval()
 
-    predict_fn = get_prediction_function(model, tokenizer)
-
     platform_top_words = {}
 
     for platform, test_path in TEST_SETS.items():
         print(f"    Platform: {platform}")
         df = pd.read_csv(test_path)
 
-        # Sample texts — stratified by label for balance
+        # Sample texts stratified by label
         samples = []
         for label_id in range(NUM_LABELS):
             subset = df[df["label"] == label_id]
@@ -121,66 +115,117 @@ def run_shap_analysis(model_key, model_path):
             samples.append(subset.sample(n, random_state=42))
         sample_df = pd.concat(samples, ignore_index=True)
         texts     = sample_df["text"].tolist()
+        labels    = sample_df["label"].tolist()
 
-        # Background sample for explainer
-        bg_texts = df.sample(
-            min(SHAP_BG_SIZE, len(df)), random_state=42
-        )["text"].tolist()
-
-        print(f"      Running SHAP on {len(texts)} samples...")
+        print(f"      Computing token importance on {len(texts)} samples...")
 
         try:
-            # Partition explainer — works with any black-box model
-            explainer   = shap.Explainer(predict_fn, bg_texts)
-            shap_values = explainer(texts, max_evals=200, batch_size=16)
-
-            # shap_values.values shape: (n_samples, n_tokens, n_classes)
-            # Extract token-level importance
-            token_importance = {}
-            for cls_idx, cls_name in enumerate(LABEL_NAMES):
-                # Mean absolute SHAP across samples for this class
-                cls_shap = np.abs(shap_values.values[:, :, cls_idx])
-                # Average per token position
-                mean_abs = cls_shap.mean(axis=0)
-                token_importance[cls_name] = mean_abs
-
-            # Save raw values
-            np.save(
-                os.path.join(SHAP_DIR,
-                             f"{model_key}_{platform}_shap.npy"),
-                shap_values.values
-            )
-
-            # Get top words per class
-            top_words = extract_top_words(
-                shap_values, texts, tokenizer, n_top=20
+            top_words = compute_token_importance(
+                model, tokenizer, texts, labels
             )
             platform_top_words[platform] = top_words
 
-            # Save top words
+            # Save top words per class
             for cls_name, words_df in top_words.items():
-                words_df.to_csv(
-                    os.path.join(SHAP_DIR,
-                                 f"{model_key}_{platform}_{cls_name}_top_words.csv"),
-                    index=False
-                )
+                if not words_df.empty:
+                    words_df.to_csv(
+                        os.path.join(
+                            SHAP_DIR,
+                            f"{model_key}_{platform}_{cls_name}_top_words.csv"
+                        ),
+                        index=False
+                    )
 
         except Exception as e:
-            print(f"      SHAP failed for {model_key}/{platform}: {e}")
+            print(f"      Failed for {model_key}/{platform}: {e}")
             platform_top_words[platform] = {}
             continue
 
-    # Generate cross-platform comparison plot
     if platform_top_words:
-        plot_cross_platform_shap(
-            model_key, platform_top_words
-        )
+        plot_cross_platform_shap(model_key, platform_top_words)
 
-    # Free GPU memory
     del model
     torch.cuda.empty_cache()
-
     return platform_top_words
+
+
+def compute_token_importance(model, tokenizer, texts, labels):
+    """
+    Token importance via gradient-based saliency.
+    For each token, computes gradient of predicted class score
+    w.r.t. input embedding — a standard interpretability method.
+    Returns top words per class.
+    """
+    word_scores = {cls: {} for cls in LABEL_NAMES}
+
+    model.eval()
+    for text, label in zip(texts, labels):
+        cls_name = LABEL_NAMES[label]
+
+        inputs = tokenizer(
+            text,
+            max_length=MAX_LEN,
+            padding="max_length",
+            truncation=True,
+            return_tensors="pt",
+        )
+        inputs = {k: v.to(DEVICE) for k, v in inputs.items()}
+
+        # Get embeddings with gradient tracking
+        embeddings = model.get_input_embeddings()(inputs["input_ids"])
+        embeddings.retain_grad()
+
+        # Forward pass
+        outputs = model(
+            inputs_embeds=embeddings,
+            attention_mask=inputs["attention_mask"],
+        )
+        probs = torch.softmax(outputs.logits, dim=-1)
+
+        # Backprop on predicted class score
+        model.zero_grad()
+        score = probs[0, label]
+        score.backward()
+
+        if embeddings.grad is None:
+            continue
+
+        # Gradient magnitude per token
+        grad_magnitude = embeddings.grad[0].norm(dim=-1).detach().cpu().numpy()
+
+        # Map back to tokens
+        tokens = tokenizer.convert_ids_to_tokens(
+            inputs["input_ids"][0].cpu().numpy()
+        )
+
+        for tok, grad in zip(tokens, grad_magnitude):
+            # Skip special tokens and short tokens
+            if tok in ["[CLS]", "[SEP]", "[PAD]", "<s>", "</s>",
+                       "<pad>", "Ġ", "▁"]:
+                continue
+            clean = tok.replace("##", "").replace("Ġ", "").strip()
+            if len(clean) < 3:
+                continue
+            if clean not in word_scores[cls_name]:
+                word_scores[cls_name][clean] = []
+            word_scores[cls_name][clean].append(float(grad))
+
+    # Aggregate
+    top_words = {}
+    for cls_name, scores in word_scores.items():
+        rows = [
+            {"word": w, "mean_shap": np.mean(v), "count": len(v)}
+            for w, v in scores.items()
+            if len(v) >= 3
+        ]
+        if not rows:
+            top_words[cls_name] = pd.DataFrame()
+            continue
+        top_words[cls_name] = pd.DataFrame(rows).sort_values(
+            "mean_shap", ascending=False
+        ).head(20)
+
+    return top_words
 
 
 def extract_top_words(shap_values, texts, tokenizer, n_top=20):
