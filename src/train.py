@@ -52,8 +52,8 @@ np.random.seed(SEED)
 MODEL_REGISTRY = {
     "bert":          cfg["models"]["bert"],
     "roberta":       cfg["models"]["roberta"],
-    "mentalbert":    cfg["models"]["mental_bert"],
-    "mentalroberta": cfg["models"]["mental_roberta"],
+    "mentalbert":    cfg["models"]["mental_bert"],    # now Hartmann DistilRoBERTa
+    "mentalroberta": cfg["models"]["mental_roberta"], # now SamLowe GoEmotions
 }
 
 NUM_LABELS  = 4

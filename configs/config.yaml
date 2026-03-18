@@ -1,8 +1,8 @@
 models:
   bert: "bert-base-uncased"
   roberta: "roberta-base"
-  mental_bert: "mental/mental-bert-base-uncased"
-  mental_roberta: "mental/mental-roberta-base-uncased"
+  mental_bert: "j-hartmann/emotion-english-distilroberta-base"
+  mental_roberta: "SamLowe/roberta-base-go_emotions"
 
 training:
   max_length: 64
