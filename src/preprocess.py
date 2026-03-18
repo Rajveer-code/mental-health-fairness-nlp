@@ -322,6 +322,53 @@ def print_summary(dfs: dict) -> None:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+def create_cross_platform_splits() -> None:
+    """
+    Creates the cross-platform evaluation setup:
+    - Train on Kaggle (multi-source, largest)
+    - Test on Reddit  (cross-platform test 1)
+    - Test on Twitter (cross-platform test 2)
+    - Also saves a held-out kaggle test set for within-platform comparison
+
+    This is the primary fairness evaluation setup for the paper.
+    """
+    out_dir = os.path.join(cfg["paths"]["splits"], "cross_platform")
+    os.makedirs(out_dir, exist_ok=True)
+
+    # Load saved splits
+    kaggle_train = pd.read_csv("data/splits/kaggle/train.csv")
+    kaggle_val   = pd.read_csv("data/splits/kaggle/val.csv")
+    kaggle_test  = pd.read_csv("data/splits/kaggle/test.csv")
+    reddit_test  = pd.read_csv("data/splits/reddit/test.csv")
+    twitter_test = pd.read_csv("data/splits/twitter/test.csv")
+
+    # Save cross-platform setup
+    kaggle_train.to_csv(os.path.join(out_dir, "train.csv"),         index=False)
+    kaggle_val.to_csv(os.path.join(out_dir,   "val.csv"),           index=False)
+    kaggle_test.to_csv(os.path.join(out_dir,  "test_kaggle.csv"),   index=False)
+    reddit_test.to_csv(os.path.join(out_dir,  "test_reddit.csv"),   index=False)
+    twitter_test.to_csv(os.path.join(out_dir, "test_twitter.csv"),  index=False)
+
+    print("\n" + "="*60)
+    print("CROSS-PLATFORM EVALUATION SETUP")
+    print("="*60)
+    print(f"  Train (Kaggle):          {len(kaggle_train):,}")
+    print(f"  Validation (Kaggle):     {len(kaggle_val):,}")
+    print(f"  Test - Within platform:  {len(kaggle_test):,}")
+    print(f"  Test - Reddit:           {len(reddit_test):,}")
+    print(f"  Test - Twitter:          {len(twitter_test):,}")
+    print(f"\n  Saved to: {out_dir}/")
+
+    # Print label distribution per test set
+    for name, df in [("Kaggle test", kaggle_test),
+                     ("Reddit test", reddit_test),
+                     ("Twitter test", twitter_test)]:
+        print(f"\n  {name} label distribution:")
+        dist = (df['label_str'].value_counts(normalize=True)*100).round(1)
+        for lbl, pct in dist.items():
+            print(f"    {lbl:<20} {pct}%")
+
+
 if __name__ == "__main__":
     print("Starting preprocessing pipeline...")
     print(f"Random seed: {SEED}")
@@ -333,16 +380,16 @@ if __name__ == "__main__":
     df_twitter = load_twitter_emotion()
 
     # Save individual splits
-    # Kaggle = primary training dataset
-    # Reddit = cross-platform test (train on Kaggle, test on Reddit)
-    # Twitter = cross-platform test (train on Kaggle, test on Twitter)
     split_and_save(df_kaggle,  "kaggle")
     split_and_save(df_reddit,  "reddit")
     split_and_save(df_twitter, "twitter")
 
-    # Also save a combined dataset (Kaggle + Reddit for larger training)
+    # Save combined
     df_combined = pd.concat([df_kaggle, df_reddit], ignore_index=True)
     split_and_save(df_combined, "combined")
+
+    # Create cross-platform evaluation setup — PRIMARY FAIRNESS SETUP
+    create_cross_platform_splits()
 
     # Print final summary
     print_summary({
