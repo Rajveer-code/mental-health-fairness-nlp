@@ -22,7 +22,6 @@ Usage:
 
 import os
 import json
-import yaml
 import warnings
 import numpy as np
 import pandas as pd
@@ -32,27 +31,20 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import roc_auc_score, f1_score, accuracy_score
 from scipy import stats
 
-warnings.filterwarnings("ignore")
+from utils import MODELS, PLATFORMS, MODEL_DISPLAY, PROB_COLS, load_config, load_predictions
+
+warnings.filterwarnings(  # suppress seaborn/matplotlib deprecation noise
+    "ignore", category=FutureWarning
+)
 
 # ── Config ────────────────────────────────────────────────────────
-with open("configs/config.yaml") as f:
-    cfg = yaml.safe_load(f)
+cfg = load_config()
 
-RESULTS_DIR   = cfg["paths"]["results"]
-FIGURES_DIR   = cfg["paths"]["figures"]
-SENS_DIR      = os.path.join(RESULTS_DIR, "sensitivity")
+RESULTS_DIR = cfg["paths"]["results"]
+FIGURES_DIR = cfg["paths"]["figures"]
+SENS_DIR    = os.path.join(RESULTS_DIR, "sensitivity")
 os.makedirs(SENS_DIR,    exist_ok=True)
 os.makedirs(FIGURES_DIR, exist_ok=True)
-
-MODELS    = ["bert", "roberta", "mentalbert", "mentalroberta"]
-PLATFORMS = ["kaggle", "reddit", "twitter"]
-
-MODEL_DISPLAY = {
-    "bert":          "BERT",
-    "roberta":       "RoBERTa",
-    "mentalbert":    "DistilRoBERTa",
-    "mentalroberta": "SamLowe-RoBERTa",
-}
 
 # ── Original 4-class label encoding ──────────────────────────────
 # 0=normal, 1=depression, 2=anxiety, 3=stress
@@ -135,20 +127,12 @@ def run_sensitivity():
         print(f"{'='*55}")
 
         for platform in PLATFORMS:
-            pred_path = os.path.join(
-                RESULTS_DIR,
-                f"{model_key}_{platform}_predictions.csv"
-            )
-            if not os.path.exists(pred_path):
-                print(f"  MISSING: {pred_path}")
+            df = load_predictions(model_key, platform, RESULTS_DIR)
+            if df is None:
                 continue
 
-            df = pd.read_csv(pred_path)
-            y_true_orig  = df["label"].values.astype(int)
-            probs_orig   = df[[
-                "prob_normal", "prob_depression",
-                "prob_anxiety", "prob_stress"
-            ]].values
+            y_true_orig = df["label"].values.astype(int)
+            probs_orig  = df[PROB_COLS].values
 
             # ── Mapping A — Original 4-class ──────────────────────
             auc_A = compute_auc(y_true_orig, probs_orig, 4)
