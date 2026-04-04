@@ -17,7 +17,6 @@ Usage:
 """
 
 import os
-import yaml
 import warnings
 import numpy as np
 import pandas as pd
@@ -27,16 +26,22 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import shap
+import shap  # vestigial import retained; gradient saliency is used in practice
 
-warnings.filterwarnings("ignore")
+from utils import (
+    MODEL_DISPLAY, PLATFORM_COLORS, CLASSES, PLATFORMS,
+    load_config,
+)
 
-with open("configs/config.yaml", "r") as f:
-    cfg = yaml.safe_load(f)
+warnings.filterwarnings(  # suppress shap/transformers deprecation noise
+    "ignore", category=FutureWarning
+)
+
+cfg = load_config()
 
 DEVICE      = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-LABEL_NAMES = ["normal", "depression", "anxiety", "stress"]
-NUM_LABELS  = 4
+# Use CLASSES from utils instead of a local CLASSES definition.
+NUM_LABELS  = len(CLASSES)
 MAX_LEN     = cfg["training"]["max_length"]
 FIGURES_DIR = cfg["paths"]["figures"]
 RESULTS_DIR = cfg["paths"]["results"]
@@ -44,22 +49,14 @@ SHAP_DIR    = os.path.join(RESULTS_DIR, "shap")
 os.makedirs(SHAP_DIR,    exist_ok=True)
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
+# Build path-based model dict from config (avoids hardcoded output paths).
 MODELS = {
-    "bert":          "outputs/models/bert",
-    "roberta":       "outputs/models/roberta",
-    "mentalbert":    "outputs/models/mentalbert",
-    "mentalroberta": "outputs/models/mentalroberta",
+    m: os.path.join(cfg["paths"]["models"], m) for m in MODEL_DISPLAY
 }
-MODEL_DISPLAY = {
-    "bert":          "BERT",
-    "roberta":       "RoBERTa",
-    "mentalbert":    "DistilRoBERTa",
-    "mentalroberta": "SamLowe-RoBERTa",
-}
+# Build test-set paths from config splits directory.
 TEST_SETS = {
-    "kaggle":  "data/splits/cross_platform/test_kaggle.csv",
-    "reddit":  "data/splits/cross_platform/test_reddit.csv",
-    "twitter": "data/splits/cross_platform/test_twitter.csv",
+    p: os.path.join(cfg["paths"]["splits"], "cross_platform", f"test_{p}.csv")
+    for p in PLATFORMS
 }
 
 # Use small sample for SHAP — it is computationally expensive
@@ -120,7 +117,7 @@ def run_shap_analysis(model_key, model_path):
         print(f"      Computing token importance on {len(texts)} samples...")
 
         try:
-            top_words = compute_token_importance(
+            top_words = _compute_token_importance_per_label(
                 model, tokenizer, texts, labels
             )
             platform_top_words[platform] = top_words
@@ -149,18 +146,35 @@ def run_shap_analysis(model_key, model_path):
     return platform_top_words
 
 
-def compute_token_importance(model, tokenizer, texts, labels):
+def _compute_token_importance_per_label(model, tokenizer, texts, labels):
     """
-    Token importance via gradient-based saliency.
-    For each token, computes gradient of predicted class score
-    w.r.t. input embedding — a standard interpretability method.
-    Returns top words per class.
+    Token importance via gradient-based saliency, stratified by true label.
+
+    This local implementation differs from ``utils.compute_token_importance``
+    in that it iterates over each text individually and uses the true label
+    to select the backprop target, returning a per-class attribution dict.
+
+    Parameters
+    ----------
+    model : AutoModelForSequenceClassification
+        Fine-tuned model.
+    tokenizer : AutoTokenizer
+        Corresponding tokenizer.
+    texts : list[str]
+        Input texts.
+    labels : list[int]
+        True class labels (one per text).
+
+    Returns
+    -------
+    dict[str, dict[str, float]]
+        ``{class_name: {token: mean_importance, ...}, ...}``
     """
-    word_scores = {cls: {} for cls in LABEL_NAMES}
+    word_scores = {cls: {} for cls in CLASSES}
 
     model.eval()
     for text, label in zip(texts, labels):
-        cls_name = LABEL_NAMES[label]
+        cls_name = CLASSES[label]
 
         inputs = tokenizer(
             text,
@@ -235,7 +249,7 @@ def extract_top_words(shap_values, texts, tokenizer, n_top=20):
     """
     top_words = {}
 
-    for cls_idx, cls_name in enumerate(LABEL_NAMES):
+    for cls_idx, cls_name in enumerate(CLASSES):
         word_scores = {}
 
         for i, text in enumerate(texts):
@@ -339,7 +353,7 @@ def plot_shap_summary_across_models():
     # Load saved top word CSVs and compute overlap
     results = []
     for model_key in MODELS:
-        for cls_name in LABEL_NAMES:
+        for cls_name in CLASSES:
             try:
                 kaggle_path  = os.path.join(
                     SHAP_DIR,

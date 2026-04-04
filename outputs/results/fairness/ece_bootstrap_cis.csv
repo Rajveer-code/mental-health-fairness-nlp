@@ -1,0 +1,13 @@
+model,platform,n,ece,ece_lo,ece_hi
+bert,kaggle,7620,0.0603,0.055,0.0659
+bert,reddit,6330,0.2395,0.2293,0.2501
+bert,twitter,2883,0.5062,0.4868,0.5234
+roberta,kaggle,7620,0.0563,0.0513,0.0618
+roberta,reddit,6330,0.2346,0.2244,0.2459
+roberta,twitter,2883,0.5135,0.4959,0.5324
+mentalbert,kaggle,7620,0.0583,0.0529,0.0638
+mentalbert,reddit,6330,0.231,0.221,0.2415
+mentalbert,twitter,2883,0.5423,0.5239,0.5607
+mentalroberta,kaggle,7620,0.0587,0.0538,0.0646
+mentalroberta,reddit,6330,0.2119,0.2022,0.223
+mentalroberta,twitter,2883,0.4993,0.4822,0.5167
