@@ -1,4 +1,0 @@
-platform,n,word_mean,word_median,word_p25,word_p75,word_max,est_token_mean,est_token_p75,est_pct_truncated,n_likely_truncated
-kaggle,7620,118.3,67.0,18.0,154.0,2153,159.7,207.9,59.2,4508
-reddit,6330,13.5,13.0,8.0,18.0,30,18.2,24.3,0.0,0
-twitter,2883,19.0,17.0,11.0,25.0,60,25.7,33.8,2.8,80
