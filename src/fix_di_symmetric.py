@@ -147,7 +147,7 @@ def run():
 
             eod_vals = []
             for cls in CLASSES:
-                cid = CLASSES.index(cls)
+                cid = CLASS_IDS[cls] 
                 rate_ref = float(np.mean(y_pred_ref == cid))
                 rate_tgt = float(np.mean(y_pred_tgt == cid))
 

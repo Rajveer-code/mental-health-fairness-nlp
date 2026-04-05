@@ -76,7 +76,7 @@ def plot_attribution_figure(model_key, platform_scores, class_name="stress"):
     """
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
     fig.suptitle(
-        f"Cross-Platform Gradient Token Attribution — {MODEL_CONFIGS[model_key]['display']}\n"
+        f"Cross-Platform Gradient Token Attribution — {MODEL_DISPLAY[model_key]}\n"
         f"{class_name.capitalize()} class: which words drive predictions per platform",
         fontsize=13, fontweight="bold"
     )

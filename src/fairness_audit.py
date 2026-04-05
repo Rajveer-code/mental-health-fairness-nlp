@@ -162,7 +162,15 @@ def disparate_impact(y_true, y_pred, group_a_mask, group_b_mask):
     for cls_idx, cls_name in enumerate(CLASSES):
         rate_a = (y_pred[group_a_mask] == cls_idx).mean()
         rate_b = (y_pred[group_b_mask] == cls_idx).mean()
-        di = rate_a / rate_b if rate_b > 0 else float("nan")
+
+        if rate_a <= 0 and rate_b <= 0:
+            di = float("nan")
+        elif rate_a <= 0 or rate_b <= 0:
+            di = 0.0
+        else:
+            ratio = rate_a / rate_b
+            di = round(float(min(ratio, 1.0 / ratio)), 4)
+
         dis[cls_name] = round(float(di), 4)
     return dis
 
