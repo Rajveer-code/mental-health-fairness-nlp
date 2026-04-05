@@ -19,7 +19,6 @@ Usage:
 
 import os
 import json
-import yaml
 import warnings
 import numpy as np
 import pandas as pd
@@ -33,26 +32,24 @@ from scipy.special import expit
 from sklearn.metrics import roc_auc_score, accuracy_score, f1_score
 from itertools import combinations
 
-warnings.filterwarnings("ignore")
+from utils import (
+    MODELS, PLATFORMS, CLASSES, MODEL_DISPLAY,
+    load_config, load_predictions, compute_aggregate_ece,
+)
+
+warnings.filterwarnings(  # suppress seaborn/matplotlib deprecation noise
+    "ignore", category=FutureWarning
+)
 
 # ── Config ────────────────────────────────────────────────────────────────────
 
-with open("configs/config.yaml", "r") as f:
-    cfg = yaml.safe_load(f)
+cfg = load_config()
 
-ALPHA       = cfg["fairness"]["alpha"]
-ECE_BINS    = cfg["fairness"]["ece_bins"]
-LABEL_NAMES = ["normal", "depression", "anxiety", "stress"]
-NUM_LABELS  = 4
+ALPHA      = cfg["fairness"]["alpha"]
+ECE_BINS   = cfg["fairness"]["ece_bins"]
+NUM_LABELS = len(CLASSES)
 
-MODELS = ["bert", "roberta", "mentalbert", "mentalroberta"]
-MODEL_DISPLAY = {
-    "bert":          "BERT",
-    "roberta":       "RoBERTa",
-    "mentalbert":    "DistilRoBERTa",
-    "mentalroberta": "SamLowe-RoBERTa",
-}
-PLATFORMS = ["kaggle", "reddit", "twitter"]
+# Script-specific display strings (not shared — not in utils)
 PLATFORM_DISPLAY = {
     "kaggle":  "Kaggle (within-platform)",
     "reddit":  "Reddit (cross-platform)",
@@ -121,7 +118,7 @@ def multiclass_auc_ci(y_true, y_probs, class_idx, alpha=0.05):
 
 # ── Expected Calibration Error ────────────────────────────────────────────────
 
-def compute_ece(y_true, y_probs, n_bins=10):
+def _compute_ece_with_bins(y_true, y_probs, n_bins=10):
     """
     Expected Calibration Error across all classes (macro).
     ECE = sum_b (|B_b| / n) * |acc(B_b) - conf(B_b)|
@@ -162,10 +159,18 @@ def disparate_impact(y_true, y_pred, group_a_mask, group_b_mask):
     For multi-class: use per-class positive rate.
     """
     dis = {}
-    for cls_idx, cls_name in enumerate(LABEL_NAMES):
+    for cls_idx, cls_name in enumerate(CLASSES):
         rate_a = (y_pred[group_a_mask] == cls_idx).mean()
         rate_b = (y_pred[group_b_mask] == cls_idx).mean()
-        di = rate_a / rate_b if rate_b > 0 else float("nan")
+
+        if rate_a <= 0 and rate_b <= 0:
+            di = float("nan")
+        elif rate_a <= 0 or rate_b <= 0:
+            di = 0.0
+        else:
+            ratio = rate_a / rate_b
+            di = round(float(min(ratio, 1.0 / ratio)), 4)
+
         dis[cls_name] = round(float(di), 4)
     return dis
 
@@ -176,7 +181,7 @@ def equalized_odds_diff(y_true, y_pred, group_a_mask, group_b_mask):
     """
     max_diff = 0.0
     diffs    = {}
-    for cls_idx, cls_name in enumerate(LABEL_NAMES):
+    for cls_idx, cls_name in enumerate(CLASSES):
         pos_a = (y_true[group_a_mask] == cls_idx)
         pos_b = (y_true[group_b_mask] == cls_idx)
         if pos_a.sum() == 0 or pos_b.sum() == 0:
@@ -240,15 +245,11 @@ def audit_model_platform(model_key, platform):
     Full fairness audit for one model on one platform.
     Returns dict of all metrics.
     """
-    pred_path = os.path.join(
-        RESULTS_DIR,
-        f"{model_key}_{platform}_predictions.csv"
-    )
-    if not os.path.exists(pred_path):
-        print(f"  WARNING: {pred_path} not found, skipping.")
+    df = load_predictions(model_key, platform, RESULTS_DIR)
+    if df is None:
+        print(f"  WARNING: predictions not found for {model_key}/{platform}, skipping.")
         return None
 
-    df = pd.read_csv(pred_path)
     y_true  = df["label"].values
     y_pred  = df["pred"].values
     y_probs = df[["prob_normal", "prob_depression",
@@ -266,7 +267,7 @@ def audit_model_platform(model_key, platform):
     # Per-class AUC with DeLong CI
     per_class_auc = {}
     auc_se_values = []
-    for i, cls_name in enumerate(LABEL_NAMES):
+    for i, cls_name in enumerate(CLASSES):
         auc, ci_lo, ci_hi, se = multiclass_auc_ci(y_true, y_probs, i)
         per_class_auc[cls_name] = {
             "auc":      auc,
@@ -281,12 +282,14 @@ def audit_model_platform(model_key, platform):
 
     avg_se = float(np.mean(auc_se_values)) if auc_se_values else 0.01
 
-    # ECE
-    ece, bin_stats = compute_ece(y_true, y_probs, ECE_BINS)
+    # ECE — uses local _compute_ece_with_bins to retain bin_stats for
+    # calibration curve plots; compute_aggregate_ece (utils) is the
+    # scalar-only version used everywhere else.
+    ece, bin_stats = _compute_ece_with_bins(y_true, y_probs, ECE_BINS)
 
     # Per-class F1
     f1_per = f1_score(y_true, y_pred, average=None, zero_division=0)
-    per_class_f1 = {LABEL_NAMES[i]: round(float(f1_per[i]), 4)
+    per_class_f1 = {CLASSES[i]: round(float(f1_per[i]), 4)
                     for i in range(len(f1_per))}
 
     return {
@@ -326,7 +329,7 @@ def plot_forest_plot(audit_results):
                 continue
             res = audit_results[key]
 
-            for cls_name in LABEL_NAMES:
+            for cls_name in CLASSES:
                 cls_res = res["per_class_auc"][cls_name]
                 auc     = cls_res["auc"]
                 ci_lo   = cls_res["ci_lower"]
@@ -490,7 +493,7 @@ def plot_heatmap(audit_results):
             row = {
                 "Model-Platform": f"{MODEL_DISPLAY[model_key]}\n{platform}"
             }
-            for cls in LABEL_NAMES:
+            for cls in CLASSES:
                 row[cls] = audit_results[key]["per_class_f1"].get(cls, float("nan"))
             rows.append(row)
 
@@ -552,17 +555,17 @@ def main():
                 "auc_macro":   res["auc_macro"],
                 "ece":         res["ece"],
                 **{f"auc_{cls}": res["per_class_auc"][cls]["auc"]
-                   for cls in LABEL_NAMES},
+                   for cls in CLASSES},
                 **{f"auc_{cls}_ci_lo": res["per_class_auc"][cls]["ci_lower"]
-                   for cls in LABEL_NAMES},
+                   for cls in CLASSES},
                 **{f"auc_{cls}_ci_hi": res["per_class_auc"][cls]["ci_upper"]
-                   for cls in LABEL_NAMES},
+                   for cls in CLASSES},
                 **{f"f1_{cls}": res["per_class_f1"][cls]
-                   for cls in LABEL_NAMES},
+                   for cls in CLASSES},
             })
 
             # Print per-class AUC with CI
-            for cls in LABEL_NAMES:
+            for cls in CLASSES:
                 ca = res["per_class_auc"][cls]
                 print(f"    {cls:<12} AUC={ca['auc']:.4f} "
                       f"[{ca['ci_lower']:.4f}, {ca['ci_upper']:.4f}]  "
