@@ -1,0 +1,7 @@
+platform,model_1,model_2,auc_1,auc_2,delta_auc,z_stat,p_value,alpha_bonferroni,significant
+twitter,bert,roberta,0.5957,0.603,-0.0073,0.695,0.487288,0.008333,False
+twitter,bert,mentalbert,0.5957,0.6107,-0.015,1.38,0.167722,0.008333,False
+twitter,bert,mentalroberta,0.5957,0.6047,-0.009,0.84,0.401183,0.008333,False
+twitter,roberta,mentalbert,0.603,0.6107,-0.0077,0.71,0.477766,0.008333,False
+twitter,roberta,mentalroberta,0.603,0.6047,-0.0017,0.158,0.874629,0.008333,False
+twitter,mentalbert,mentalroberta,0.6107,0.6047,0.006,0.545,0.58567,0.008333,False

@@ -1,0 +1,4 @@
+platform,n,exact_pct_truncated,exact_mean_tokens,exact_median_tokens,exact_max_tokens
+kaggle,7620,55.4,137.7,79.0,2518
+reddit,6257,0.0,19.2,19.0,320
+twitter,2883,0.0,21.8,20.0,63

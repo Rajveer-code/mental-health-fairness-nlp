@@ -1,0 +1,7 @@
+platform,model_1,model_2,auc_1,auc_2,delta_auc,z_stat,p_value,alpha_bonferroni,significant
+reddit,bert,roberta,0.6447,0.6374,0.0073,0.573,0.566314,0.008333,False
+reddit,bert,mentalbert,0.6447,0.6852,-0.0405,3.098,0.001947,0.008333,True
+reddit,bert,mentalroberta,0.6447,0.7029,-0.0582,4.586,5e-06,0.008333,True
+reddit,roberta,mentalbert,0.6374,0.6852,-0.0478,3.554,0.00038,0.008333,True
+reddit,roberta,mentalroberta,0.6374,0.7029,-0.0655,5.006,1e-06,0.008333,True
+reddit,mentalbert,mentalroberta,0.6852,0.7029,-0.0177,1.328,0.184287,0.008333,False
