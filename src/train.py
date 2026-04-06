@@ -1,18 +1,35 @@
 """
 train.py
---------
+────────
 Fine-tunes four transformer models on the Kaggle mental health dataset.
-Models: BERT-base, RoBERTa-base, MentalBERT, MentalRoBERTa
 
-Saves model checkpoints to outputs/models/
-Saves training metrics to outputs/results/
+Models: BERT-base, RoBERTa-base, DistilRoBERTa, SamLowe-RoBERTa
 
-Usage:
+Supports multi-seed training for variance reporting (Section 5 / Tables 2, 3).
+Each seed produces a separate checkpoint saved to:
+    outputs/models/{model_key}_seed{seed}/
+
+Inputs
+------
+data/splits/cross_platform/train.csv
+data/splits/cross_platform/val.csv
+
+Outputs
+-------
+outputs/models/{model_key}_seed{seed}/   — best checkpoint per seed
+outputs/results/{model_key}_history.csv — per-epoch metrics
+outputs/results/{model_key}_summary.json
+
+Usage
+-----
+Run from the repository root:
     python src/train.py --model bert
-    python src/train.py --model roberta
-    python src/train.py --model mentalbert
-    python src/train.py --model mentalroberta
     python src/train.py --model all
+    python src/train.py --model all --seeds 42 123 456
+
+Dependencies
+------------
+Requires preprocess.py to have been run first.
 """
 
 import os
@@ -52,8 +69,8 @@ np.random.seed(SEED)
 MODEL_REGISTRY = {
     "bert":          cfg["models"]["bert"],
     "roberta":       cfg["models"]["roberta"],
-    "mentalbert":    cfg["models"]["mental_bert"],    # now Hartmann DistilRoBERTa
-    "mentalroberta": cfg["models"]["mental_roberta"], # now SamLowe GoEmotions
+    "mentalbert":    cfg["models"]["mental_bert"],
+    "mentalroberta": cfg["models"]["mental_roberta"],
 }
 
 NUM_LABELS  = 4
@@ -65,14 +82,15 @@ EPOCHS      = cfg["training"]["epochs"]
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+# FIX 1: Removed unsupported expandable_segments env var (caused UserWarning on Windows)
+# FIX 2: Updated GradScaler to non-deprecated API
 torch.cuda.empty_cache()
-
-scaler = torch.cuda.amp.GradScaler() if DEVICE.type == "cuda" else None
+scaler = torch.amp.GradScaler("cuda") if DEVICE.type == "cuda" else None
 
 print(f"Device: {DEVICE}")
 if DEVICE.type == "cuda":
     print(f"GPU: {torch.cuda.get_device_name(0)}")
+    print(f"VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
 
 
 # ── Dataset class ─────────────────────────────────────────────────────────────
@@ -81,8 +99,8 @@ class MentalHealthDataset(Dataset):
     """PyTorch Dataset wrapper for mental health text data."""
 
     def __init__(self, df: pd.DataFrame, tokenizer, max_len: int):
-        self.texts  = df["text"].tolist()
-        self.labels = df["label"].tolist()
+        self.texts     = df["text"].tolist()
+        self.labels    = df["label"].tolist()
         self.tokenizer = tokenizer
         self.max_len   = max_len
 
@@ -117,12 +135,11 @@ def compute_metrics(labels, preds, probs):
     f1_wt  = f1_score(labels, preds, average="weighted", zero_division=0)
     f1_per = f1_score(labels, preds, average=None,       zero_division=0)
 
-    # AUC — requires probability scores
     try:
         auc = roc_auc_score(
             labels, probs,
             multi_class="ovr",
-            average="macro"
+            average="macro",
         )
     except ValueError:
         auc = float("nan")
@@ -130,7 +147,7 @@ def compute_metrics(labels, preds, probs):
     report = classification_report(
         labels, preds,
         target_names=LABEL_NAMES,
-        zero_division=0
+        zero_division=0,
     )
 
     return {
@@ -151,6 +168,7 @@ def compute_metrics(labels, preds, probs):
 def train_epoch(model, loader, optimizer, scheduler):
     model.train()
     total_loss = 0
+
     for batch in tqdm(loader, desc="  Training", leave=False):
         optimizer.zero_grad()
         input_ids      = batch["input_ids"].to(DEVICE)
@@ -158,10 +176,13 @@ def train_epoch(model, loader, optimizer, scheduler):
         labels         = batch["label"].to(DEVICE)
 
         if scaler is not None:
-            with torch.cuda.amp.autocast():
-                outputs = model(input_ids=input_ids,
-                                attention_mask=attention_mask,
-                                labels=labels)
+            # FIX 3: Updated autocast to non-deprecated API
+            with torch.amp.autocast("cuda"):
+                outputs = model(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    labels=labels,
+                )
                 loss = outputs.loss
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)
@@ -169,9 +190,11 @@ def train_epoch(model, loader, optimizer, scheduler):
             scaler.step(optimizer)
             scaler.update()
         else:
-            outputs = model(input_ids=input_ids,
-                            attention_mask=attention_mask,
-                            labels=labels)
+            outputs = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                labels=labels,
+            )
             loss = outputs.loss
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -179,6 +202,7 @@ def train_epoch(model, loader, optimizer, scheduler):
 
         scheduler.step()
         total_loss += loss.item()
+
     return total_loss / len(loader)
 
 
@@ -220,14 +244,35 @@ def evaluate(model, loader):
 
 # ── Main training function ────────────────────────────────────────────────────
 
-def train_model(model_key: str):
+def train_model(model_key: str, seed: int | None = None) -> float:
     """
-    Full training pipeline for one model.
-    Loads data, trains for EPOCHS, saves best checkpoint.
+    Fine-tune a single model with a given random seed.
+
+    Parameters
+    ----------
+    model_key : str
+        One of ``MODEL_REGISTRY`` keys (e.g. ``"bert"``).
+    seed : int or None, optional
+        Random seed to use. If ``None``, uses the global ``SEED`` from
+        ``configs/config.yaml``. When provided, sets both ``torch`` and
+        ``numpy`` seeds and saves checkpoints to a seed-specific directory.
+
+    Returns
+    -------
+    float
+        Best validation macro F1 achieved across all epochs.
     """
+    effective_seed = seed if seed is not None else SEED
+    torch.manual_seed(effective_seed)
+    np.random.seed(effective_seed)
+
+    torch.set_num_threads(4)
+    if DEVICE.type == "cuda":
+        torch.cuda.set_per_process_memory_fraction(0.85)
+
     model_name = MODEL_REGISTRY[model_key]
     print(f"\n{'='*60}")
-    print(f"Training: {model_key.upper()}")
+    print(f"Training: {model_key.upper()}  (seed={effective_seed})")
     print(f"Model:    {model_name}")
     print(f"Epochs:   {EPOCHS} | Batch: {BATCH_SIZE} | LR: {LR}")
     print(f"{'='*60}")
@@ -235,7 +280,6 @@ def train_model(model_key: str):
     # ── Load data ──
     train_df = pd.read_csv("data/splits/cross_platform/train.csv")
     val_df   = pd.read_csv("data/splits/cross_platform/val.csv")
-
     print(f"\nTrain: {len(train_df):,} | Val: {len(val_df):,}")
 
     # ── Tokenizer ──
@@ -245,21 +289,29 @@ def train_model(model_key: str):
     train_dataset = MentalHealthDataset(train_df, tokenizer, MAX_LEN)
     val_dataset   = MentalHealthDataset(val_df,   tokenizer, MAX_LEN)
 
+    # FIX 4: pin_memory=True for faster CPU→GPU transfers
+    # NOTE: If you want to increase speed further, raise batch_size in config.yaml
+    #       Try 32 first; go to 64 if no OOM on your RTX 4060 8GB.
     train_loader = DataLoader(
         train_dataset,
         batch_size=BATCH_SIZE,
         shuffle=True,
-        num_workers=0,
+        num_workers=0,       # keep 0 on Windows — multiprocessing broken in MINGW64
+        pin_memory=True,     # faster host→device transfers
     )
     val_loader = DataLoader(
         val_dataset,
-        batch_size=BATCH_SIZE,
+        batch_size=BATCH_SIZE * 2,  # no gradients during eval → double the batch
         shuffle=False,
         num_workers=0,
+        pin_memory=True,
     )
 
     # ── Model ──
     print(f"Loading model: {model_name}")
+    # NOTE: The LOAD REPORT (UNEXPECTED/MISSING keys) printed by HuggingFace is normal.
+    # UNEXPECTED = pre-training heads (MLM, NSP) being discarded → expected.
+    # MISSING    = new classification head being randomly init'd  → expected.
     model = AutoModelForSequenceClassification.from_pretrained(
         model_name,
         num_labels=NUM_LABELS,
@@ -270,8 +322,8 @@ def train_model(model_key: str):
 
     # ── Optimizer + scheduler ──
     optimizer = AdamW(model.parameters(), lr=LR, weight_decay=0.01)
-    total_steps   = len(train_loader) * EPOCHS
-    warmup_steps  = total_steps // 10   # 10% warmup
+    total_steps  = len(train_loader) * EPOCHS
+    warmup_steps = total_steps // 10   # 10% linear warmup
     scheduler = get_linear_schedule_with_warmup(
         optimizer,
         num_warmup_steps=warmup_steps,
@@ -279,10 +331,13 @@ def train_model(model_key: str):
     )
 
     # ── Training loop ──
-    best_val_f1  = 0.0
-    best_epoch   = 0
-    history      = []
-    out_model_dir = os.path.join(cfg["paths"]["models"], model_key)
+    best_val_f1   = 0.0
+    best_epoch    = 0
+    history       = []
+    # Save to seed-specific directory so multi-seed runs don't overwrite each other.
+    out_model_dir = os.path.join(
+        cfg["paths"]["models"], f"{model_key}_seed{effective_seed}"
+    )
     os.makedirs(out_model_dir, exist_ok=True)
 
     for epoch in range(1, EPOCHS + 1):
@@ -293,11 +348,13 @@ def train_model(model_key: str):
         val_metrics, _, _, _ = evaluate(model, val_loader)
 
         elapsed = round(time.time() - t0, 1)
-        print(f"  Loss: {train_loss:.4f} | "
-              f"Val Acc: {val_metrics['accuracy']:.4f} | "
-              f"Val F1: {val_metrics['f1_macro']:.4f} | "
-              f"Val AUC: {val_metrics['auc_macro']:.4f} | "
-              f"Time: {elapsed}s")
+        print(
+            f"  Loss: {train_loss:.4f} | "
+            f"Val Acc: {val_metrics['accuracy']:.4f} | "
+            f"Val F1:  {val_metrics['f1_macro']:.4f} | "
+            f"Val AUC: {val_metrics['auc_macro']:.4f} | "
+            f"Time: {elapsed}s"
+        )
 
         history.append({
             "epoch":      epoch,
@@ -306,7 +363,7 @@ def train_model(model_key: str):
                if k not in ["report", "f1_per_class"]},
         })
 
-        # Save best model
+        # Save best checkpoint by macro F1
         if val_metrics["f1_macro"] > best_val_f1:
             best_val_f1 = val_metrics["f1_macro"]
             best_epoch  = epoch
@@ -321,25 +378,27 @@ def train_model(model_key: str):
     history_df = pd.DataFrame(history)
     history_df.to_csv(
         os.path.join(results_dir, f"{model_key}_history.csv"),
-        index=False
+        index=False,
     )
 
-    # Save best metrics summary
+    # Save best-epoch summary (includes seed for multi-run traceability)
     summary = {
-        "model_key":    model_key,
-        "model_name":   model_name,
-        "best_epoch":   best_epoch,
-        "best_val_f1":  best_val_f1,
-        "trained_at":   datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "device":       str(DEVICE),
+        "model_key":     model_key,
+        "model_name":    model_name,
+        "seed":          effective_seed,
+        "best_epoch":    best_epoch,
+        "best_val_f1":   best_val_f1,
+        "trained_at":    datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "device":        str(DEVICE),
         "train_samples": len(train_df),
         "val_samples":   len(val_df),
     }
-    with open(os.path.join(results_dir, f"{model_key}_summary.json"), "w") as f:
+    summary_name = f"{model_key}_seed{effective_seed}_summary.json"
+    with open(os.path.join(results_dir, summary_name), "w") as f:
         json.dump(summary, f, indent=2)
 
     print(f"\n{'='*60}")
-    print(f"Training complete: {model_key.upper()}")
+    print(f"Training complete: {model_key.upper()}  (seed={effective_seed})")
     print(f"Best epoch: {best_epoch} | Best Val F1: {best_val_f1:.4f}")
     print(f"Model saved to: {out_model_dir}")
     print(f"{'='*60}")
@@ -356,17 +415,41 @@ if __name__ == "__main__":
         type=str,
         default="bert",
         choices=["bert", "roberta", "mentalbert", "mentalroberta", "all"],
-        help="Which model to train"
+        help="Which model to train",
+    )
+    parser.add_argument(
+        "--seeds",
+        type=int,
+        nargs="+",
+        default=[42],
+        help=(
+            "Random seeds for multi-seed training. "
+            "E.g. --seeds 42 123 456 runs three full training passes. "
+            "Default: [42] (single seed, backward-compatible)."
+        ),
     )
     args = parser.parse_args()
 
+    all_results: dict[str, dict[int, float]] = {}
+
     if args.model == "all":
-        results = {}
-        for key in MODEL_REGISTRY:
-            results[key] = train_model(key)
-        print("\n\nFINAL RESULTS SUMMARY")
-        print("="*40)
-        for key, f1 in results.items():
-            print(f"  {key:<15} Val F1: {f1:.4f}")
+        for seed in args.seeds:
+            for key in MODEL_REGISTRY:
+                f1 = train_model(key, seed=seed)
+                all_results.setdefault(key, {})[seed] = f1
     else:
-        train_model(args.model)
+        for seed in args.seeds:
+            f1 = train_model(args.model, seed=seed)
+            all_results.setdefault(args.model, {})[seed] = f1
+
+    print("\n\nFINAL RESULTS SUMMARY")
+    print("=" * 55)
+    for key, seed_f1s in all_results.items():
+        vals = list(seed_f1s.values())
+        mean_f1 = float(np.mean(vals))
+        std_f1  = float(np.std(vals)) if len(vals) > 1 else float("nan")
+        if len(vals) == 1:
+            print(f"  {key:<15} Val F1: {vals[0]:.4f}  (seed={list(seed_f1s.keys())[0]})")
+        else:
+            print(f"  {key:<15} Val F1: {mean_f1:.4f} ± {std_f1:.4f}  "
+                  f"(seeds={list(seed_f1s.keys())})")

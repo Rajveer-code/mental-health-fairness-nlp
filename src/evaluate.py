@@ -1,16 +1,23 @@
 """
-evaluate.py
+evaluate.py  [FIXED — v2]
 -----------
 Evaluates all trained models on three test sets:
   1. test_kaggle.csv   — within-platform (same distribution as training)
   2. test_reddit.csv   — cross-platform test 1
   3. test_twitter.csv  — cross-platform test 2
 
-Saves per-model per-platform predictions to outputs/results/
-These are used by fairness_audit.py in the next step.
+CHANGES FROM ORIGINAL:
+  • run_inference() now also returns raw logits (pre-softmax).
+  • Prediction CSVs now include four extra columns:
+      logit_normal, logit_depression, logit_anxiety, logit_stress
+  These raw logits are required by code_A5_temperature_scaling.py for
+  correct temperature scaling (log(softmax) ≠ logit).
 
 Usage:
     python src/evaluate.py
+
+IMPORTANT: You must re-run this script after applying this fix so that
+the prediction CSVs contain the logit columns before running code_A5.
 """
 
 import os
@@ -86,14 +93,17 @@ class InferenceDataset(torch.utils.data.Dataset):
 def run_inference(model, tokenizer, df):
     """
     Run model on a dataframe.
-    Returns: labels, predictions, probabilities (all numpy arrays)
+    Returns: labels, predictions, probabilities, logits (all numpy arrays).
+
+    Logits are the raw pre-softmax scores — required for correct temperature
+    scaling.  softmax(logits / T) is NOT the same as softmax(log(softmax(logits)) / T).
     """
     dataset = InferenceDataset(df, tokenizer, MAX_LEN)
     loader  = DataLoader(dataset, batch_size=BATCH_SIZE,
                          shuffle=False, num_workers=0)
 
     model.eval()
-    all_labels, all_preds, all_probs = [], [], []
+    all_labels, all_preds, all_probs, all_logits = [], [], [], []
 
     with torch.no_grad():
         for batch in tqdm(loader, desc="    Inferring", leave=False):
@@ -102,16 +112,22 @@ def run_inference(model, tokenizer, df):
 
             outputs = model(input_ids=input_ids,
                             attention_mask=attention_mask)
-            probs = torch.softmax(outputs.logits, dim=-1)
-            preds = torch.argmax(probs, dim=-1)
+
+            raw_logits = outputs.logits                          # (B, 4) pre-softmax
+            probs      = torch.softmax(raw_logits, dim=-1)       # (B, 4)
+            preds      = torch.argmax(probs, dim=-1)             # (B,)
 
             all_labels.extend(batch["label"].numpy())
             all_preds.extend(preds.cpu().numpy())
             all_probs.extend(probs.cpu().numpy())
+            all_logits.extend(raw_logits.cpu().numpy())
 
-    return (np.array(all_labels),
-            np.array(all_preds),
-            np.array(all_probs))
+    return (
+        np.array(all_labels),
+        np.array(all_preds),
+        np.array(all_probs),
+        np.array(all_logits),
+    )
 
 
 # ── Metrics ───────────────────────────────────────────────────────────────────
@@ -149,7 +165,6 @@ def main():
     results_dir = cfg["paths"]["results"]
     os.makedirs(results_dir, exist_ok=True)
 
-    # Master results table — rows = model x platform
     master_rows = []
 
     for model_key, model_path in MODELS.items():
@@ -157,7 +172,6 @@ def main():
         print(f"Evaluating: {model_key.upper()}")
         print(f"{'='*60}")
 
-        # Load model and tokenizer from saved checkpoint
         tokenizer = AutoTokenizer.from_pretrained(model_path)
         model     = AutoModelForSequenceClassification.from_pretrained(
             model_path,
@@ -169,12 +183,12 @@ def main():
         model_results = {}
 
         for platform, test_path in TEST_SETS.items():
-            print(f"\n  Platform: {platform.upper()} "
-                  f"({test_path})")
+            print(f"\n  Platform: {platform.upper()} ({test_path})")
             df = pd.read_csv(test_path)
             print(f"  Samples: {len(df):,}")
 
-            labels, preds, probs = run_inference(model, tokenizer, df)
+            # --- CHANGED: run_inference now also returns logits ---
+            labels, preds, probs, logits = run_inference(model, tokenizer, df)
             metrics = compute_metrics(labels, preds, probs)
 
             print(f"  Accuracy: {metrics['accuracy']:.4f} | "
@@ -182,20 +196,26 @@ def main():
                   f"AUC: {metrics['auc_macro']:.4f}")
             print(f"  Per-class F1: {metrics['f1_per_class']}")
 
-            # Save raw predictions + probabilities for fairness audit
+            # Save predictions + probabilities + RAW LOGITS
             pred_df = df.copy()
-            pred_df["pred"]  = preds
-            pred_df["prob_normal"]     = probs[:, 0]
-            pred_df["prob_depression"] = probs[:, 1]
-            pred_df["prob_anxiety"]    = probs[:, 2]
-            pred_df["prob_stress"]     = probs[:, 3]
-            pred_df["correct"] = (preds == labels).astype(int)
+            pred_df["pred"]             = preds
+            pred_df["prob_normal"]      = probs[:, 0]
+            pred_df["prob_depression"]  = probs[:, 1]
+            pred_df["prob_anxiety"]     = probs[:, 2]
+            pred_df["prob_stress"]      = probs[:, 3]
+            # --- NEW: raw logit columns for temperature scaling ---
+            pred_df["logit_normal"]     = logits[:, 0]
+            pred_df["logit_depression"] = logits[:, 1]
+            pred_df["logit_anxiety"]    = logits[:, 2]
+            pred_df["logit_stress"]     = logits[:, 3]
+            pred_df["correct"]          = (preds == labels).astype(int)
 
             pred_path = os.path.join(
                 results_dir,
                 f"{model_key}_{platform}_predictions.csv"
             )
             pred_df.to_csv(pred_path, index=False)
+            print(f"  Saved: {pred_path}  (includes logit columns)")
 
             model_results[platform] = metrics
 
@@ -210,27 +230,24 @@ def main():
                    for k, v in metrics["f1_per_class"].items()},
             })
 
-        # Save per-model results JSON
         with open(os.path.join(results_dir,
                                f"{model_key}_eval.json"), "w") as f:
             json.dump(model_results, f, indent=2)
 
-        # Free GPU memory before next model
         del model
         torch.cuda.empty_cache()
 
-    # Save master results table
-    master_df = pd.DataFrame(master_rows)
+    master_df   = pd.DataFrame(master_rows)
     master_path = os.path.join(results_dir, "master_results.csv")
     master_df.to_csv(master_path, index=False)
 
-    # Print final summary table
     print(f"\n{'='*60}")
     print("EVALUATION COMPLETE — MASTER RESULTS TABLE")
     print(f"{'='*60}")
     print(master_df.to_string(index=False))
     print(f"\nSaved to: {master_path}")
-    print("\nNext step: python src/fairness_audit.py")
+    print("\nPrediction CSVs now contain logit_normal/depression/anxiety/stress columns.")
+    print("Next step: python src/fairness_audit.py")
 
 
 if __name__ == "__main__":

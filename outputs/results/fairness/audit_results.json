@@ -1,0 +1,590 @@
+{
+  "bert_kaggle": {
+    "model": "bert",
+    "platform": "kaggle",
+    "n_samples": 7620,
+    "accuracy": 0.9304,
+    "f1_macro": 0.8739,
+    "auc_macro": 0.984,
+    "ece": 0.0603,
+    "per_class_auc": {
+      "normal": {
+        "auc": 0.991,
+        "ci_lower": 0.9891,
+        "ci_upper": 0.9929,
+        "se": 0.00096,
+        "n_pos": 2188,
+        "n_neg": 5432
+      },
+      "depression": {
+        "auc": 0.9882,
+        "ci_lower": 0.9861,
+        "ci_upper": 0.9902,
+        "se": 0.001036,
+        "n_pos": 4314,
+        "n_neg": 3306
+      },
+      "anxiety": {
+        "auc": 0.988,
+        "ci_lower": 0.9839,
+        "ci_upper": 0.9921,
+        "se": 0.002095,
+        "n_pos": 569,
+        "n_neg": 7051
+      },
+      "stress": {
+        "auc": 0.9689,
+        "ci_lower": 0.9617,
+        "ci_upper": 0.976,
+        "se": 0.003643,
+        "n_pos": 549,
+        "n_neg": 7071
+      }
+    },
+    "per_class_f1": {
+      "normal": 0.9428,
+      "depression": 0.9592,
+      "anxiety": 0.8608,
+      "stress": 0.733
+    }
+  },
+  "bert_reddit": {
+    "model": "bert",
+    "platform": "reddit",
+    "n_samples": 6257,
+    "accuracy": 0.7544,
+    "f1_macro": 0.3034,
+    "auc_macro": 0.6447,
+    "ece": 0.2285,
+    "per_class_auc": {
+      "normal": {
+        "auc": 0.6512,
+        "ci_lower": 0.6337,
+        "ci_upper": 0.6687,
+        "se": 0.008936,
+        "n_pos": 5063,
+        "n_neg": 1194
+      },
+      "depression": {
+        "auc": 0.5966,
+        "ci_lower": 0.5677,
+        "ci_upper": 0.6255,
+        "se": 0.014747,
+        "n_pos": 410,
+        "n_neg": 5847
+      },
+      "anxiety": {
+        "auc": 0.6931,
+        "ci_lower": 0.6471,
+        "ci_upper": 0.7391,
+        "se": 0.023478,
+        "n_pos": 141,
+        "n_neg": 6116
+      },
+      "stress": {
+        "auc": 0.6381,
+        "ci_lower": 0.6143,
+        "ci_upper": 0.662,
+        "se": 0.012168,
+        "n_pos": 643,
+        "n_neg": 5614
+      }
+    },
+    "per_class_f1": {
+      "normal": 0.8721,
+      "depression": 0.1239,
+      "anxiety": 0.1865,
+      "stress": 0.0312
+    }
+  },
+  "bert_twitter": {
+    "model": "bert",
+    "platform": "twitter",
+    "n_samples": 2883,
+    "accuracy": 0.4603,
+    "f1_macro": 0.3166,
+    "auc_macro": 0.5957,
+    "ece": 0.5062,
+    "per_class_auc": {
+      "normal": {
+        "auc": 0.622,
+        "ci_lower": 0.6015,
+        "ci_upper": 0.6424,
+        "se": 0.010413,
+        "n_pos": 1258,
+        "n_neg": 1625
+      },
+      "depression": {
+        "auc": 0.6028,
+        "ci_lower": 0.5804,
+        "ci_upper": 0.6251,
+        "se": 0.011396,
+        "n_pos": 867,
+        "n_neg": 2016
+      },
+      "anxiety": {
+        "auc": 0.6283,
+        "ci_lower": 0.5961,
+        "ci_upper": 0.6605,
+        "se": 0.016442,
+        "n_pos": 354,
+        "n_neg": 2529
+      },
+      "stress": {
+        "auc": 0.5298,
+        "ci_lower": 0.4997,
+        "ci_upper": 0.5599,
+        "se": 0.01535,
+        "n_pos": 404,
+        "n_neg": 2479
+      }
+    },
+    "per_class_f1": {
+      "normal": 0.5788,
+      "depression": 0.4436,
+      "anxiety": 0.1626,
+      "stress": 0.0816
+    }
+  },
+  "roberta_kaggle": {
+    "model": "roberta",
+    "platform": "kaggle",
+    "n_samples": 7620,
+    "accuracy": 0.9364,
+    "f1_macro": 0.883,
+    "auc_macro": 0.9865,
+    "ece": 0.0563,
+    "per_class_auc": {
+      "normal": {
+        "auc": 0.9933,
+        "ci_lower": 0.9916,
+        "ci_upper": 0.9951,
+        "se": 0.000895,
+        "n_pos": 2188,
+        "n_neg": 5432
+      },
+      "depression": {
+        "auc": 0.9902,
+        "ci_lower": 0.9885,
+        "ci_upper": 0.9919,
+        "se": 0.000891,
+        "n_pos": 4314,
+        "n_neg": 3306
+      },
+      "anxiety": {
+        "auc": 0.9906,
+        "ci_lower": 0.9874,
+        "ci_upper": 0.9937,
+        "se": 0.001596,
+        "n_pos": 569,
+        "n_neg": 7051
+      },
+      "stress": {
+        "auc": 0.9721,
+        "ci_lower": 0.9658,
+        "ci_upper": 0.9784,
+        "se": 0.003221,
+        "n_pos": 549,
+        "n_neg": 7071
+      }
+    },
+    "per_class_f1": {
+      "normal": 0.9497,
+      "depression": 0.963,
+      "anxiety": 0.8799,
+      "stress": 0.7396
+    }
+  },
+  "roberta_reddit": {
+    "model": "roberta",
+    "platform": "reddit",
+    "n_samples": 6257,
+    "accuracy": 0.7681,
+    "f1_macro": 0.3037,
+    "auc_macro": 0.6374,
+    "ece": 0.2207,
+    "per_class_auc": {
+      "normal": {
+        "auc": 0.6484,
+        "ci_lower": 0.6307,
+        "ci_upper": 0.666,
+        "se": 0.009026,
+        "n_pos": 5063,
+        "n_neg": 1194
+      },
+      "depression": {
+        "auc": 0.5992,
+        "ci_lower": 0.5712,
+        "ci_upper": 0.6273,
+        "se": 0.014301,
+        "n_pos": 410,
+        "n_neg": 5847
+      },
+      "anxiety": {
+        "auc": 0.6862,
+        "ci_lower": 0.6363,
+        "ci_upper": 0.736,
+        "se": 0.025433,
+        "n_pos": 141,
+        "n_neg": 6116
+      },
+      "stress": {
+        "auc": 0.6158,
+        "ci_lower": 0.5912,
+        "ci_upper": 0.6404,
+        "se": 0.012533,
+        "n_pos": 643,
+        "n_neg": 5614
+      }
+    },
+    "per_class_f1": {
+      "normal": 0.8795,
+      "depression": 0.1227,
+      "anxiety": 0.1979,
+      "stress": 0.0145
+    }
+  },
+  "roberta_twitter": {
+    "model": "roberta",
+    "platform": "twitter",
+    "n_samples": 2883,
+    "accuracy": 0.4603,
+    "f1_macro": 0.2844,
+    "auc_macro": 0.603,
+    "ece": 0.5135,
+    "per_class_auc": {
+      "normal": {
+        "auc": 0.6352,
+        "ci_lower": 0.615,
+        "ci_upper": 0.6554,
+        "se": 0.010307,
+        "n_pos": 1258,
+        "n_neg": 1625
+      },
+      "depression": {
+        "auc": 0.6065,
+        "ci_lower": 0.584,
+        "ci_upper": 0.6291,
+        "se": 0.011491,
+        "n_pos": 867,
+        "n_neg": 2016
+      },
+      "anxiety": {
+        "auc": 0.6488,
+        "ci_lower": 0.6172,
+        "ci_upper": 0.6804,
+        "se": 0.016111,
+        "n_pos": 354,
+        "n_neg": 2529
+      },
+      "stress": {
+        "auc": 0.5215,
+        "ci_lower": 0.4917,
+        "ci_upper": 0.5513,
+        "se": 0.015209,
+        "n_pos": 404,
+        "n_neg": 2479
+      }
+    },
+    "per_class_f1": {
+      "normal": 0.5858,
+      "depression": 0.4468,
+      "anxiety": 0.0955,
+      "stress": 0.0096
+    }
+  },
+  "mentalbert_kaggle": {
+    "model": "mentalbert",
+    "platform": "kaggle",
+    "n_samples": 7620,
+    "accuracy": 0.928,
+    "f1_macro": 0.8623,
+    "auc_macro": 0.9833,
+    "ece": 0.0583,
+    "per_class_auc": {
+      "normal": {
+        "auc": 0.9932,
+        "ci_lower": 0.9917,
+        "ci_upper": 0.9946,
+        "se": 0.000746,
+        "n_pos": 2188,
+        "n_neg": 5432
+      },
+      "depression": {
+        "auc": 0.9883,
+        "ci_lower": 0.9863,
+        "ci_upper": 0.9903,
+        "se": 0.001015,
+        "n_pos": 4314,
+        "n_neg": 3306
+      },
+      "anxiety": {
+        "auc": 0.9862,
+        "ci_lower": 0.9813,
+        "ci_upper": 0.991,
+        "se": 0.002473,
+        "n_pos": 569,
+        "n_neg": 7051
+      },
+      "stress": {
+        "auc": 0.9656,
+        "ci_lower": 0.9588,
+        "ci_upper": 0.9724,
+        "se": 0.003478,
+        "n_pos": 549,
+        "n_neg": 7071
+      }
+    },
+    "per_class_f1": {
+      "normal": 0.9415,
+      "depression": 0.9607,
+      "anxiety": 0.8501,
+      "stress": 0.6969
+    }
+  },
+  "mentalbert_reddit": {
+    "model": "mentalbert",
+    "platform": "reddit",
+    "n_samples": 6257,
+    "accuracy": 0.7684,
+    "f1_macro": 0.332,
+    "auc_macro": 0.6852,
+    "ece": 0.2077,
+    "per_class_auc": {
+      "normal": {
+        "auc": 0.6943,
+        "ci_lower": 0.6771,
+        "ci_upper": 0.7115,
+        "se": 0.008772,
+        "n_pos": 5063,
+        "n_neg": 1194
+      },
+      "depression": {
+        "auc": 0.6117,
+        "ci_lower": 0.5822,
+        "ci_upper": 0.6411,
+        "se": 0.015033,
+        "n_pos": 410,
+        "n_neg": 5847
+      },
+      "anxiety": {
+        "auc": 0.7048,
+        "ci_lower": 0.6529,
+        "ci_upper": 0.7567,
+        "se": 0.026463,
+        "n_pos": 141,
+        "n_neg": 6116
+      },
+      "stress": {
+        "auc": 0.7301,
+        "ci_lower": 0.7081,
+        "ci_upper": 0.752,
+        "se": 0.011208,
+        "n_pos": 643,
+        "n_neg": 5614
+      }
+    },
+    "per_class_f1": {
+      "normal": 0.8818,
+      "depression": 0.1473,
+      "anxiety": 0.2222,
+      "stress": 0.0765
+    }
+  },
+  "mentalbert_twitter": {
+    "model": "mentalbert",
+    "platform": "twitter",
+    "n_samples": 2883,
+    "accuracy": 0.4086,
+    "f1_macro": 0.2895,
+    "auc_macro": 0.6107,
+    "ece": 0.5423,
+    "per_class_auc": {
+      "normal": {
+        "auc": 0.6079,
+        "ci_lower": 0.5874,
+        "ci_upper": 0.6283,
+        "se": 0.010434,
+        "n_pos": 1258,
+        "n_neg": 1625
+      },
+      "depression": {
+        "auc": 0.5855,
+        "ci_lower": 0.5622,
+        "ci_upper": 0.6089,
+        "se": 0.011908,
+        "n_pos": 867,
+        "n_neg": 2016
+      },
+      "anxiety": {
+        "auc": 0.7144,
+        "ci_lower": 0.6815,
+        "ci_upper": 0.7473,
+        "se": 0.016784,
+        "n_pos": 354,
+        "n_neg": 2529
+      },
+      "stress": {
+        "auc": 0.5349,
+        "ci_lower": 0.5032,
+        "ci_upper": 0.5666,
+        "se": 0.016175,
+        "n_pos": 404,
+        "n_neg": 2479
+      }
+    },
+    "per_class_f1": {
+      "normal": 0.4677,
+      "depression": 0.4469,
+      "anxiety": 0.2244,
+      "stress": 0.0191
+    }
+  },
+  "mentalroberta_kaggle": {
+    "model": "mentalroberta",
+    "platform": "kaggle",
+    "n_samples": 7620,
+    "accuracy": 0.9303,
+    "f1_macro": 0.8711,
+    "auc_macro": 0.9848,
+    "ece": 0.0587,
+    "per_class_auc": {
+      "normal": {
+        "auc": 0.9917,
+        "ci_lower": 0.9899,
+        "ci_upper": 0.9935,
+        "se": 0.000917,
+        "n_pos": 2188,
+        "n_neg": 5432
+      },
+      "depression": {
+        "auc": 0.9891,
+        "ci_lower": 0.9871,
+        "ci_upper": 0.991,
+        "se": 0.000986,
+        "n_pos": 4314,
+        "n_neg": 3306
+      },
+      "anxiety": {
+        "auc": 0.9878,
+        "ci_lower": 0.9838,
+        "ci_upper": 0.9919,
+        "se": 0.002067,
+        "n_pos": 569,
+        "n_neg": 7051
+      },
+      "stress": {
+        "auc": 0.9707,
+        "ci_lower": 0.9656,
+        "ci_upper": 0.9758,
+        "se": 0.00261,
+        "n_pos": 549,
+        "n_neg": 7071
+      }
+    },
+    "per_class_f1": {
+      "normal": 0.9446,
+      "depression": 0.9607,
+      "anxiety": 0.8586,
+      "stress": 0.7204
+    }
+  },
+  "mentalroberta_reddit": {
+    "model": "mentalroberta",
+    "platform": "reddit",
+    "n_samples": 6257,
+    "accuracy": 0.7863,
+    "f1_macro": 0.3182,
+    "auc_macro": 0.7029,
+    "ece": 0.1955,
+    "per_class_auc": {
+      "normal": {
+        "auc": 0.7263,
+        "ci_lower": 0.7095,
+        "ci_upper": 0.743,
+        "se": 0.00855,
+        "n_pos": 5063,
+        "n_neg": 1194
+      },
+      "depression": {
+        "auc": 0.6276,
+        "ci_lower": 0.5997,
+        "ci_upper": 0.6556,
+        "se": 0.014258,
+        "n_pos": 410,
+        "n_neg": 5847
+      },
+      "anxiety": {
+        "auc": 0.7022,
+        "ci_lower": 0.6487,
+        "ci_upper": 0.7558,
+        "se": 0.027307,
+        "n_pos": 141,
+        "n_neg": 6116
+      },
+      "stress": {
+        "auc": 0.7556,
+        "ci_lower": 0.7344,
+        "ci_upper": 0.7767,
+        "se": 0.010785,
+        "n_pos": 643,
+        "n_neg": 5614
+      }
+    },
+    "per_class_f1": {
+      "normal": 0.8962,
+      "depression": 0.1503,
+      "anxiety": 0.2,
+      "stress": 0.0262
+    }
+  },
+  "mentalroberta_twitter": {
+    "model": "mentalroberta",
+    "platform": "twitter",
+    "n_samples": 2883,
+    "accuracy": 0.4655,
+    "f1_macro": 0.3056,
+    "auc_macro": 0.6047,
+    "ece": 0.4993,
+    "per_class_auc": {
+      "normal": {
+        "auc": 0.6418,
+        "ci_lower": 0.6215,
+        "ci_upper": 0.6621,
+        "se": 0.010374,
+        "n_pos": 1258,
+        "n_neg": 1625
+      },
+      "depression": {
+        "auc": 0.6217,
+        "ci_lower": 0.6001,
+        "ci_upper": 0.6433,
+        "se": 0.011014,
+        "n_pos": 867,
+        "n_neg": 2016
+      },
+      "anxiety": {
+        "auc": 0.6136,
+        "ci_lower": 0.5787,
+        "ci_upper": 0.6485,
+        "se": 0.017801,
+        "n_pos": 354,
+        "n_neg": 2529
+      },
+      "stress": {
+        "auc": 0.5416,
+        "ci_lower": 0.512,
+        "ci_upper": 0.5713,
+        "se": 0.015129,
+        "n_pos": 404,
+        "n_neg": 2479
+      }
+    },
+    "per_class_f1": {
+      "normal": 0.5871,
+      "depression": 0.4347,
+      "anxiety": 0.1592,
+      "stress": 0.0414
+    }
+  }
+}

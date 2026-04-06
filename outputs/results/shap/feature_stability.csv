@@ -1,0 +1,17 @@
+model,class,kaggle_reddit_sim,kaggle_twitter_sim,avg_stability
+BERT,normal,0.0,0.053,0.026
+BERT,depression,0.053,0.0,0.026
+BERT,anxiety,0.0,0.0,0.0
+BERT,stress,0.0,0.0,0.0
+RoBERTa,normal,0.053,0.111,0.082
+RoBERTa,depression,0.0,0.0,0.0
+RoBERTa,anxiety,0.176,0.0,0.088
+RoBERTa,stress,0.0,0.0,0.0
+DistilRoBERTa,normal,0.053,0.111,0.082
+DistilRoBERTa,depression,0.053,0.0,0.026
+DistilRoBERTa,anxiety,0.0,0.0,0.0
+DistilRoBERTa,stress,0.053,0.0,0.026
+SamLowe-RoBERTa,normal,0.053,0.0,0.026
+SamLowe-RoBERTa,depression,0.0,0.0,0.0
+SamLowe-RoBERTa,anxiety,0.0,0.0,0.0
+SamLowe-RoBERTa,stress,0.053,0.0,0.026

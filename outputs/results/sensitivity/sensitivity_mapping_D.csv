@@ -1,0 +1,13 @@
+model,platform,n,auc_D,mapping
+bert,kaggle,7620,0.991,D
+bert,reddit,6257,0.6512,D
+bert,twitter,2883,0.622,D
+roberta,kaggle,7620,0.9933,D
+roberta,reddit,6257,0.6484,D
+roberta,twitter,2883,0.6352,D
+mentalbert,kaggle,7620,0.9932,D
+mentalbert,reddit,6257,0.6943,D
+mentalbert,twitter,2883,0.6079,D
+mentalroberta,kaggle,7620,0.9917,D
+mentalroberta,reddit,6257,0.7263,D
+mentalroberta,twitter,2883,0.6418,D

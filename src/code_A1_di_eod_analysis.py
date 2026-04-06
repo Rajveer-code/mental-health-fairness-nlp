@@ -92,6 +92,90 @@ def disparate_impact(
     return round(float(min(ratio, 1.0 / ratio)), 4)
 
 
+def disparate_impact_prior_adjusted(
+    y_true_ref: np.ndarray,
+    y_pred_ref: np.ndarray,
+    y_true_tgt: np.ndarray,
+    y_pred_tgt: np.ndarray,
+    class_id: int,
+) -> dict:
+    """
+    Prior-shift-adjusted Disparate Impact for class ``class_id``.
+
+    Computes DI on class-balanced subsets by resampling the reference
+    platform to match the target platform's class prevalence, removing
+    the prior-shift confound.  Returns both raw DI and adjusted DI.
+
+    This is needed because Reddit has ~80.9% normal samples vs Kaggle's
+    ~29%: a model correctly adapting to this prevalence difference would
+    show lower clinical-class prediction rates on Reddit by design,
+    which reduces raw DI below 1.0 without any genuine model failure.
+
+    Parameters
+    ----------
+    y_true_ref, y_pred_ref : np.ndarray
+        Ground-truth labels and predictions for the reference platform.
+    y_true_tgt, y_pred_tgt : np.ndarray
+        Ground-truth labels and predictions for the target platform.
+    class_id : int
+        Class index in [0, n_classes).
+
+    Returns
+    -------
+    dict
+        Keys: ``di_raw``, ``di_adjusted``, ``prev_ref``, ``prev_tgt``.
+        ``di_raw`` is the symmetric DI from ``disparate_impact()``.
+        ``di_adjusted`` is DI after resampling ref to match tgt prevalence.
+        Either may be ``float("nan")`` if resampling is not feasible.
+    """
+    prev_ref = float(np.mean(y_true_ref == class_id))
+    prev_tgt = float(np.mean(y_true_tgt == class_id))
+
+    di_raw = disparate_impact(y_true_ref, y_pred_ref,
+                              y_true_tgt, y_pred_tgt, class_id)
+
+    # Resample reference to match target class prevalence
+    n_ref      = len(y_true_ref)
+    n_pos_tgt  = int(round(prev_tgt * n_ref))
+    n_neg_tgt  = n_ref - n_pos_tgt
+
+    pos_ref_idx = np.where(y_true_ref == class_id)[0]
+    neg_ref_idx = np.where(y_true_ref != class_id)[0]
+
+    if len(pos_ref_idx) < n_pos_tgt or len(neg_ref_idx) < n_neg_tgt:
+        # Cannot resample without replacement — return raw only
+        return {
+            "di_raw":      di_raw,
+            "di_adjusted": float("nan"),
+            "prev_ref":    round(prev_ref, 4),
+            "prev_tgt":    round(prev_tgt, 4),
+        }
+
+    rng         = np.random.default_rng(42)
+    sampled_pos = rng.choice(pos_ref_idx, size=n_pos_tgt, replace=False)
+    sampled_neg = rng.choice(neg_ref_idx, size=n_neg_tgt, replace=False)
+    balanced_idx = np.concatenate([sampled_pos, sampled_neg])
+
+    y_pred_ref_balanced = y_pred_ref[balanced_idx]
+    rate_ref_adj        = float(np.mean(y_pred_ref_balanced == class_id))
+    rate_tgt            = float(np.mean(y_pred_tgt == class_id))
+
+    if rate_ref_adj <= 0 and rate_tgt <= 0:
+        di_adj = float("nan")
+    elif rate_ref_adj <= 0 or rate_tgt <= 0:
+        di_adj = 0.0
+    else:
+        ratio  = rate_ref_adj / rate_tgt
+        di_adj = round(float(min(ratio, 1.0 / ratio)), 4)
+
+    return {
+        "di_raw":      di_raw,
+        "di_adjusted": di_adj,
+        "prev_ref":    round(prev_ref, 4),
+        "prev_tgt":    round(prev_tgt, 4),
+    }
+
+
 def equalized_odds_difference(y_true_ref: np.ndarray, y_pred_ref: np.ndarray,
                               y_true_tgt: np.ndarray, y_pred_tgt: np.ndarray,
                               class_id: int) -> float:
@@ -152,15 +236,20 @@ def run_di_eod():
 
             print(f"\n  Kaggle (n={len(y_true_ref):,}) vs "
                   f"{tgt_platform.capitalize()} (n={len(y_true_tgt):,})")
-            print(f"  {'Class':<12} {'DI':>8} {'EOD':>8} {'Interpretation'}")
-            print(f"  {'-'*50}")
+            print(f"  {'Class':<12} {'DI_raw':>8} {'DI_adj':>10} "
+                  f"{'EOD':>8} {'Interpretation'}")
+            print(f"  {'-'*58}")
 
             for cls in CLASSES:
                 cid = CLASS_IDS[cls]
-                di  = disparate_impact(y_true_ref, y_pred_ref,
-                                       y_true_tgt, y_pred_tgt, cid)
-                eod = equalized_odds_difference(y_true_ref, y_pred_ref,
-                                               y_true_tgt, y_pred_tgt, cid)
+                di_result = disparate_impact_prior_adjusted(
+                    y_true_ref, y_pred_ref,
+                    y_true_tgt, y_pred_tgt, cid
+                )
+                di     = di_result["di_raw"]
+                di_adj = di_result["di_adjusted"]
+                eod    = equalized_odds_difference(y_true_ref, y_pred_ref,
+                                                   y_true_tgt, y_pred_tgt, cid)
 
                 # Interpret DI
                 if np.isnan(di):
@@ -172,10 +261,11 @@ def run_di_eod():
                 else:
                     di_flag = "OK (≥0.80)"
 
-                print(f"  {cls:<12} {di:>8.4f} {eod:>8.4f}  {di_flag}")
+                print(f"  {cls:<12} {di:>8.4f} {di_adj:>10.4f} {eod:>8.4f}  {di_flag}")
 
-                row[f"di_{cls}"]  = di
-                row[f"eod_{cls}"] = eod
+                row[f"di_{cls}"]      = di
+                row[f"di_adj_{cls}"]  = di_adj
+                row[f"eod_{cls}"]     = eod
 
             rows.append(row)
 
@@ -271,29 +361,42 @@ def plot_eod_heatmap(df: pd.DataFrame):
 
 def print_paper_table(df: pd.DataFrame):
     """
-    Print a formatted version of the DI/EOD table suitable for copying
-    into Table 6 in the paper.
+    Print a formatted version of the DI/EOD table (Table 6) with both
+    raw and prior-shift-adjusted DI values.
     """
-    print(f"\n{'='*75}")
-    print("TABLE 6 — For Paper: Disparate Impact and Max Equalized Odds Difference")
-    print(f"{'='*75}")
-    print(f"{'Model':<20} {'Platform':<10} {'DI_normal':>9} {'DI_depres':>9} "
-          f"{'DI_anxty':>9} {'DI_stress':>9} {'EOD_max':>9}")
-    print("-" * 75)
+    print(f"\n{'='*100}")
+    print("TABLE 6 — DI (raw), DI (prior-adjusted), and Max EOD — for paper")
+    print(f"{'='*100}")
+    print(
+        f"{'Model':<20} {'Platform':<10} "
+        f"{'DI_nor':>7} {'DI_dep':>7} {'DI_anx':>7} {'DI_str':>7} "
+        f"{'DI*_nor':>8} {'DI*_dep':>8} {'DI*_anx':>8} {'DI*_str':>8} "
+        f"{'EOD_max':>9}"
+    )
+    print("-" * 100)
 
     for _, row in df.iterrows():
         eod_vals = [row[f"eod_{c}"] for c in CLASSES
                     if not np.isnan(row.get(f"eod_{c}", np.nan))]
         eod_max  = max(eod_vals) if eod_vals else float("nan")
 
-        print(f"{MODEL_DISPLAY[row['model']]:<20} {row['platform']:<10} "
-              f"{row['di_normal']:>9.3f} {row['di_depression']:>9.3f} "
-              f"{row['di_anxiety']:>9.3f} {row['di_stress']:>9.3f} "
-              f"{eod_max:>9.3f}")
+        def _fmt(val: float) -> str:
+            return f"{val:>7.3f}" if not np.isnan(val) else "    N/A"
 
-    print(f"\nNote: DI < 0.80 violates the four-fifths rule.")
-    print("      EOD = 0 indicates perfect Equalized Odds.")
-    print("      Reference platform: Kaggle (within-platform).")
+        print(
+            f"{MODEL_DISPLAY[row['model']]:<20} {row['platform']:<10} "
+            f"{_fmt(row['di_normal'])} {_fmt(row['di_depression'])} "
+            f"{_fmt(row['di_anxiety'])} {_fmt(row['di_stress'])} "
+            f"{_fmt(row.get('di_adj_normal', float('nan')))} "
+            f"{_fmt(row.get('di_adj_depression', float('nan')))} "
+            f"{_fmt(row.get('di_adj_anxiety', float('nan')))} "
+            f"{_fmt(row.get('di_adj_stress', float('nan')))} "
+            f"{eod_max:>9.3f}"
+        )
+
+    print(f"\nDI* = prior-shift-adjusted DI (reference resampled to match target prevalence).")
+    print("DI < 0.80 violates the four-fifths rule.  EOD = 0 = perfect Equalized Odds.")
+    print("Reference platform: Kaggle.")
 
 
 # ── Entry Point ───────────────────────────────────────────────────

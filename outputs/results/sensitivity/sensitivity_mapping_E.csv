@@ -1,0 +1,13 @@
+model,platform,n_distress,auc_E,mapping
+bert,kaggle,5432,0.9847,E
+bert,reddit,1194,0.4836,E
+bert,twitter,1625,0.5913,E
+roberta,kaggle,5432,0.9862,E
+roberta,reddit,1194,0.4701,E
+roberta,twitter,1625,0.5703,E
+mentalbert,kaggle,5432,0.9814,E
+mentalbert,reddit,1194,0.5238,E
+mentalbert,twitter,1625,0.632,E
+mentalroberta,kaggle,5432,0.9859,E
+mentalroberta,reddit,1194,0.4765,E
+mentalroberta,twitter,1625,0.595,E

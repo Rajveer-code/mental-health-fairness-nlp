@@ -1,0 +1,9 @@
+model,platform,n_cal,n_eval,temperature,ece_before,ece_after,ece_reduction_pct,auc_before,auc_after,auc_change,logits_source
+bert,reddit,625,5632,4.3125,0.2248,0.0574,74.5,0.649,0.6453,-0.0037,raw_logits_from_model
+bert,twitter,288,2595,8.0356,0.5075,0.0268,94.7,0.5927,0.6071,0.0143,raw_logits_from_model
+roberta,reddit,625,5632,3.8772,0.2209,0.0703,68.2,0.6437,0.6335,-0.0101,raw_logits_from_model
+roberta,twitter,288,2595,9.5232,0.5086,0.0184,96.4,0.605,0.6086,0.0035,raw_logits_from_model
+mentalbert,reddit,625,5632,3.1607,0.21,0.0329,84.3,0.6791,0.6808,0.0017,raw_logits_from_model
+mentalbert,twitter,288,2595,8.2683,0.5412,0.0431,92.0,0.6099,0.6432,0.0334,raw_logits_from_model
+mentalroberta,reddit,625,5632,3.1364,0.1942,0.0655,66.3,0.7015,0.6977,-0.0038,raw_logits_from_model
+mentalroberta,twitter,288,2595,6.8121,0.5027,0.0393,92.2,0.6073,0.6092,0.0019,raw_logits_from_model

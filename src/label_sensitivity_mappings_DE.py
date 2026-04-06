@@ -180,7 +180,11 @@ def run_mapping_DE():
         print(f"{'='*55}")
 
         for platform in PLATFORMS:
-            df = load_predictions(model_key, platform, RESULTS_DIR) or pd.DataFrame()
+            df = load_predictions(model_key, platform, RESULTS_DIR)
+
+            if df is None or df.empty:
+                print(f"  MISSING: {model_key}/{platform}")
+                continue
             if df.empty:
                 print(f"  MISSING: {model_key}/{platform}")
                 continue

@@ -1,19 +1,36 @@
 """
 shap_analysis.py
-----------------
-SHAP-based feature attribution analysis.
+────────────────
+Gradient-based saliency attribution analysis across platforms.
 
-For each model, computes SHAP values on the Kaggle test set
-and cross-platform test sets to identify which linguistic
-features drive prediction disparities across platforms.
+For each model, computes gradient saliency scores on the Kaggle test set
+and cross-platform test sets to identify which linguistic features drive
+prediction disparities across platforms.
 
-Saves:
-  - SHAP summary plots per model
-  - Cross-platform feature importance comparison
-  - Top features driving platform disparities
+Method: gradient-based saliency (backpropagation of class probability
+score through the token embedding layer), implementing Equations 8–9
+from the paper. Note: despite the filename, this script does NOT use
+the SHAP library; the method is gradient saliency throughout.
 
-Usage:
+Inputs
+------
+data/splits/cross_platform/test_{platform}.csv
+outputs/models/{model_key}/
+
+Outputs
+-------
+outputs/results/gradient_attribution/{model}_{platform}_{class}_top_words.csv
+outputs/figures/figure5_{model}_gradient_cross_platform.png
+outputs/figures/figure6_feature_stability.png
+
+Usage
+-----
+Run from the repository root:
     python src/shap_analysis.py
+
+Dependencies
+------------
+Requires train.py to have been run first (model checkpoints must exist).
 """
 
 import os
@@ -26,14 +43,12 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-import shap  # vestigial import retained; gradient saliency is used in practice
-
 from utils import (
     MODEL_DISPLAY, PLATFORM_COLORS, CLASSES, PLATFORMS,
     load_config,
 )
 
-warnings.filterwarnings(  # suppress shap/transformers deprecation noise
+warnings.filterwarnings(  # suppress transformers deprecation noise
     "ignore", category=FutureWarning
 )
 
@@ -45,8 +60,8 @@ NUM_LABELS  = len(CLASSES)
 MAX_LEN     = cfg["training"]["max_length"]
 FIGURES_DIR = cfg["paths"]["figures"]
 RESULTS_DIR = cfg["paths"]["results"]
-SHAP_DIR    = os.path.join(RESULTS_DIR, "shap")
-os.makedirs(SHAP_DIR,    exist_ok=True)
+GRAD_DIR    = os.path.join(RESULTS_DIR, "gradient_attribution")
+os.makedirs(GRAD_DIR,    exist_ok=True)
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
 # Build path-based model dict from config (avoids hardcoded output paths).
@@ -59,9 +74,9 @@ TEST_SETS = {
     for p in PLATFORMS
 }
 
-# Use small sample for SHAP — it is computationally expensive
-SHAP_SAMPLE_SIZE  = 200
-SHAP_BG_SIZE      = 50   # background samples for explainer
+# Sample size for gradient saliency — limit to keep compute feasible
+SHAP_SAMPLE_SIZE  = 200   # retained for backward compat with callers
+GRAD_SAMPLE_SIZE  = 200
 
 
 def get_prediction_function(model, tokenizer):
@@ -88,6 +103,12 @@ def get_prediction_function(model, tokenizer):
 
 
 def run_shap_analysis(model_key, model_path):
+    """
+    Compute gradient-based saliency attribution for all platforms.
+
+    Despite the function name (retained for backward compatibility),
+    this uses gradient saliency — not SHAP.
+    """
     print(f"\n  Loading model: {model_key}")
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model     = AutoModelForSequenceClassification.from_pretrained(
@@ -108,13 +129,13 @@ def run_shap_analysis(model_key, model_path):
         samples = []
         for label_id in range(NUM_LABELS):
             subset = df[df["label"] == label_id]
-            n      = min(SHAP_SAMPLE_SIZE // NUM_LABELS, len(subset))
+            n      = min(GRAD_SAMPLE_SIZE // NUM_LABELS, len(subset))
             samples.append(subset.sample(n, random_state=42))
         sample_df = pd.concat(samples, ignore_index=True)
         texts     = sample_df["text"].tolist()
         labels    = sample_df["label"].tolist()
 
-        print(f"      Computing token importance on {len(texts)} samples...")
+        print(f"      Computing gradient saliency on {len(texts)} samples...")
 
         try:
             top_words = _compute_token_importance_per_label(
@@ -127,7 +148,7 @@ def run_shap_analysis(model_key, model_path):
                 if not words_df.empty:
                     words_df.to_csv(
                         os.path.join(
-                            SHAP_DIR,
+                            GRAD_DIR,
                             f"{model_key}_{platform}_{cls_name}_top_words.csv"
                         ),
                         index=False
@@ -139,7 +160,7 @@ def run_shap_analysis(model_key, model_path):
             continue
 
     if platform_top_words:
-        plot_cross_platform_shap(model_key, platform_top_words)
+        plot_cross_platform_gradient(model_key, platform_top_words)
 
     del model
     torch.cuda.empty_cache()
@@ -228,7 +249,7 @@ def _compute_token_importance_per_label(model, tokenizer, texts, labels):
     top_words = {}
     for cls_name, scores in word_scores.items():
         rows = [
-            {"word": w, "mean_shap": np.mean(v), "count": len(v)}
+            {"word": w, "mean_gradient": np.mean(v), "count": len(v)}
             for w, v in scores.items()
             if len(v) >= 3
         ]
@@ -236,16 +257,31 @@ def _compute_token_importance_per_label(model, tokenizer, texts, labels):
             top_words[cls_name] = pd.DataFrame()
             continue
         top_words[cls_name] = pd.DataFrame(rows).sort_values(
-            "mean_shap", ascending=False
+            "mean_gradient", ascending=False
         ).head(20)
 
     return top_words
 
 
-def extract_top_words(shap_values, texts, tokenizer, n_top=20):
+def extract_top_words(gradient_values, texts, tokenizer, n_top=20):
     """
-    Extract top words by mean absolute SHAP value per class.
-    Returns dict of {class_name: DataFrame with word, mean_shap}
+    Extract top words by mean gradient saliency magnitude per class.
+
+    Parameters
+    ----------
+    gradient_values : object
+        Gradient attribution values (structured with .values attribute).
+    texts : list[str]
+        Input texts.
+    tokenizer : AutoTokenizer
+        Tokenizer used to produce tokens.
+    n_top : int
+        Number of top words to retain per class.
+
+    Returns
+    -------
+    dict[str, pd.DataFrame]
+        ``{class_name: DataFrame with columns word, mean_gradient, count}``
     """
     top_words = {}
 
@@ -253,12 +289,12 @@ def extract_top_words(shap_values, texts, tokenizer, n_top=20):
         word_scores = {}
 
         for i, text in enumerate(texts):
-            if i >= len(shap_values):
+            if i >= len(gradient_values):
                 break
             tokens = tokenizer.tokenize(text,
                                         max_length=MAX_LEN,
                                         truncation=True)
-            values = shap_values.values[i, :len(tokens), cls_idx]
+            values = gradient_values.values[i, :len(tokens), cls_idx]
 
             for tok, val in zip(tokens, values):
                 # Clean subword tokens
@@ -271,7 +307,7 @@ def extract_top_words(shap_values, texts, tokenizer, n_top=20):
 
         # Aggregate — require at least 3 occurrences
         rows = [
-            {"word": w, "mean_shap": np.mean(scores),
+            {"word": w, "mean_gradient": np.mean(scores),
              "count": len(scores)}
             for w, scores in word_scores.items()
             if len(scores) >= 3
@@ -281,17 +317,17 @@ def extract_top_words(shap_values, texts, tokenizer, n_top=20):
             continue
 
         df = pd.DataFrame(rows).sort_values(
-            "mean_shap", ascending=False
+            "mean_gradient", ascending=False
         ).head(n_top)
         top_words[cls_name] = df
 
     return top_words
 
 
-def plot_cross_platform_shap(model_key, platform_top_words):
+def plot_cross_platform_gradient(model_key, platform_top_words):
     """
-    Side-by-side bar chart comparing top SHAP words
-    for depression class across Kaggle vs Reddit vs Twitter.
+    Side-by-side bar chart comparing top gradient saliency tokens
+    for the depression class across Kaggle vs Reddit vs Twitter.
     Figure 5 — cross-platform feature disparity.
     """
     cls_name = "depression"   # Focus on depression — most clinically relevant
@@ -317,12 +353,12 @@ def plot_cross_platform_shap(model_key, platform_top_words):
         ax = axes[idx]
         ax.barh(
             df["word"],
-            df["mean_shap"],
+            df["mean_gradient"],
             color=colors.get(platform, "steelblue"),
             alpha=0.85,
             edgecolor="white",
         )
-        ax.set_xlabel("Mean |SHAP value|", fontsize=10)
+        ax.set_xlabel("Mean |Gradient Saliency|", fontsize=10)
         ax.set_title(
             f"{platform.upper()}\n(top {cls_name} features)",
             fontsize=11, fontweight="bold"
@@ -331,13 +367,13 @@ def plot_cross_platform_shap(model_key, platform_top_words):
         ax.grid(axis="x", alpha=0.3)
 
     plt.suptitle(
-        f"Cross-Platform SHAP Feature Attribution — {MODEL_DISPLAY[model_key]}\n"
+        f"Cross-Platform Gradient Saliency Attribution — {MODEL_DISPLAY[model_key]}\n"
         f"Depression class: which words drive predictions per platform",
         fontsize=12, fontweight="bold"
     )
     plt.tight_layout()
     path = os.path.join(FIGURES_DIR,
-                        f"figure5_{model_key}_shap_cross_platform.png")
+                        f"figure5_{model_key}_gradient_cross_platform.png")
     plt.savefig(path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"      Saved: {path}")
@@ -345,9 +381,9 @@ def plot_cross_platform_shap(model_key, platform_top_words):
 
 def plot_shap_summary_across_models():
     """
-    Summary comparison: which model has the most stable
+    Summary comparison: which model has the most stable gradient-based
     feature attribution across platforms.
-    Computed as cosine similarity of top-word rankings.
+    Computed as Jaccard similarity of top-10 word rankings.
     Figure 6.
     """
     # Load saved top word CSVs and compute overlap
@@ -356,15 +392,15 @@ def plot_shap_summary_across_models():
         for cls_name in CLASSES:
             try:
                 kaggle_path  = os.path.join(
-                    SHAP_DIR,
+                    GRAD_DIR,
                     f"{model_key}_kaggle_{cls_name}_top_words.csv"
                 )
                 reddit_path  = os.path.join(
-                    SHAP_DIR,
+                    GRAD_DIR,
                     f"{model_key}_reddit_{cls_name}_top_words.csv"
                 )
                 twitter_path = os.path.join(
-                    SHAP_DIR,
+                    GRAD_DIR,
                     f"{model_key}_twitter_{cls_name}_top_words.csv"
                 )
 
@@ -398,7 +434,7 @@ def plot_shap_summary_across_models():
         return
 
     df = pd.DataFrame(results)
-    df.to_csv(os.path.join(SHAP_DIR, "feature_stability.csv"), index=False)
+    df.to_csv(os.path.join(GRAD_DIR, "feature_stability.csv"), index=False)
 
     # Plot
     pivot = df.pivot_table(
@@ -428,18 +464,16 @@ def plot_shap_summary_across_models():
 
 
 def main():
-    print("Starting SHAP analysis...")
-    print(f"Sample size per platform: {SHAP_SAMPLE_SIZE}")
-    print(f"Background size: {SHAP_BG_SIZE}")
-    print("Note: SHAP is slow — ~5-10 mins per model. Do not interrupt.\n")
+    print("Starting gradient saliency attribution analysis...")
+    print(f"Sample size per platform: {GRAD_SAMPLE_SIZE}")
+    print("Note: gradient attribution is compute-intensive (~5–10 min per model).\n")
 
-    # Run SHAP for all models
-    # Start with RoBERTa — best overall model
+    # Run for all models; start with RoBERTa — best overall performer
     priority_models = ["roberta", "bert", "mentalbert", "mentalroberta"]
 
     for model_key in priority_models:
         print(f"\n{'='*50}")
-        print(f"SHAP Analysis: {MODEL_DISPLAY[model_key]}")
+        print(f"Gradient Saliency Attribution: {MODEL_DISPLAY[model_key]}")
         print(f"{'='*50}")
         run_shap_analysis(model_key, MODELS[model_key])
 
@@ -448,11 +482,10 @@ def main():
     plot_shap_summary_across_models()
 
     print(f"\n{'='*50}")
-    print("SHAP ANALYSIS COMPLETE")
+    print("GRADIENT SALIENCY ANALYSIS COMPLETE")
     print(f"{'='*50}")
     print(f"Figures saved to: {FIGURES_DIR}")
-    print(f"Data saved to:    {SHAP_DIR}")
-    print("\nNext step: notebooks/02_results_figures.ipynb")
+    print(f"Data saved to:    {GRAD_DIR}")
 
 
 if __name__ == "__main__":

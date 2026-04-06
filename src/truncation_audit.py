@@ -69,11 +69,65 @@ EFFECTIVE_LIMIT = MAX_LENGTH - SPECIAL_TOKENS       # 62 content tokens
 def estimate_subword_tokens(text: str) -> int:
     """
     Estimate subword token count without loading the full tokenizer.
-    Uses word count × 1.35 (empirically validated for English social media text).
-    For exact counts, replace with:
-        tokenizer.encode(text, add_special_tokens=False)
+    Uses word count × 1.35 heuristic (BPE expansion for English social media text).
+    Call ``compute_exact_truncation`` for the authoritative tokenizer-based count.
     """
     return int(len(str(text).split()) * SUBWORD_MULTIPLIER)
+
+
+def compute_exact_truncation(
+    df: pd.DataFrame,
+    max_length: int = MAX_LENGTH,
+    model_id: str = "roberta-base",
+) -> tuple[float, list[int]]:
+    """
+    Compute the exact truncation rate using the actual RoBERTa subword tokenizer.
+
+    This resolves the abstract/methods inconsistency (59.2% vs 51%) by
+    producing a single authoritative number that replaces the heuristic
+    estimate throughout the manuscript.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame with a ``text`` column.
+    max_length : int, optional
+        Maximum token sequence length including special tokens.
+        Default is ``MAX_LENGTH`` from config (64).
+    model_id : str, optional
+        HuggingFace model identifier for the tokenizer.
+        Default is ``"roberta-base"``.
+
+    Returns
+    -------
+    tuple[float, list[int]]
+        ``(pct_truncated, lengths)`` where ``pct_truncated`` is the percentage
+        of samples whose tokenized length exceeds ``max_length``, and ``lengths``
+        is the list of token counts (including special tokens) for every sample.
+    """
+    try:
+        from transformers import AutoTokenizer
+        tokenizer = AutoTokenizer.from_pretrained(model_id)
+    except Exception as e:
+        print(f"  WARNING: Could not load tokenizer '{model_id}': {e}")
+        print("  Falling back to heuristic estimate.")
+        lengths = [int(len(str(t).split()) * SUBWORD_MULTIPLIER) + 2
+                   for t in df["text"].tolist()]
+        pct = sum(1 for ln in lengths if ln > max_length) / len(lengths) * 100
+        return round(pct, 1), lengths
+
+    print(f"  Computing exact token lengths using {model_id} tokenizer "
+          f"(this may take a moment)...")
+    lengths: list[int] = []
+    texts = df["text"].fillna("").tolist()
+    for text in texts:
+        ids = tokenizer.encode(text, add_special_tokens=True, truncation=False)
+        lengths.append(len(ids))
+
+    pct_truncated = sum(1 for ln in lengths if ln > max_length) / len(lengths) * 100
+    print(f"  Exact truncation rate: {pct_truncated:.1f}% "
+          f"(n={len(lengths):,}, max_length={max_length})")
+    return round(pct_truncated, 1), lengths
 
 
 def load_test_data(platform: str) -> pd.DataFrame:
@@ -385,7 +439,9 @@ def run():
         print(f"\n  {MODEL_DISPLAY[model_key]}:")
         for platform in PLATFORMS:
             test_df = load_test_data(platform)
-            pred_df = load_predictions(model_key, platform, RESULTS_DIR) or pd.DataFrame()
+            pred_df = load_predictions(model_key, platform, RESULTS_DIR)
+            if pred_df is None:
+                pred_df = pd.DataFrame()
             if test_df.empty or pred_df.empty:
                 print(f"    {platform}: MISSING data — skipping")
                 continue
@@ -445,9 +501,44 @@ def run():
 
     print_paper_text(stats_list, all_corr_rows)
 
+    # ── Exact tokenizer-based truncation rate (B7 fix) ─────────────────────
+    print(f"\n{'='*60}")
+    print("EXACT TOKENIZER-BASED TRUNCATION RATES (RoBERTa tokenizer)")
+    print(f"{'='*60}")
+    exact_rows = []
+    for platform in PLATFORMS:
+        df_plat = load_test_data(platform)
+        if df_plat.empty:
+            continue
+        pct_exact, lengths = compute_exact_truncation(
+            df_plat, max_length=MAX_LENGTH, model_id="roberta-base"
+        )
+        mean_len = round(float(np.mean(lengths)), 1)
+        med_len  = round(float(np.median(lengths)), 1)
+        max_len  = int(np.max(lengths))
+        print(f"  {platform:<10} exact_trunc={pct_exact:.1f}%  "
+              f"mean_tokens={mean_len}  median={med_len}  max={max_len}")
+        exact_rows.append({
+            "platform":           platform,
+            "n":                  len(df_plat),
+            "exact_pct_truncated": pct_exact,
+            "exact_mean_tokens":  mean_len,
+            "exact_median_tokens": med_len,
+            "exact_max_tokens":   max_len,
+        })
+
+    if exact_rows:
+        exact_df = pd.DataFrame(exact_rows)
+        exact_path = os.path.join(fairness_dir, "truncation_exact_rates.csv")
+        exact_df.to_csv(exact_path, index=False)
+        print(f"\n  Use 'exact_pct_truncated' for the Kaggle figure in the abstract "
+              f"and methods — this replaces the heuristic-based 51% and 59.2% estimates.")
+        print(f"  Saved: {exact_path}")
+
     print(f"\nOutputs saved to:")
     print(f"  {fairness_dir}/truncation_length_stats.csv")
     print(f"  {fairness_dir}/truncation_length_error_correlations.csv")
+    print(f"  {fairness_dir}/truncation_exact_rates.csv")
     print(f"  {FIGURES_DIR}/truncation_length_distributions.png")
     print(f"  {FIGURES_DIR}/truncation_auc_by_quartile.png")
 

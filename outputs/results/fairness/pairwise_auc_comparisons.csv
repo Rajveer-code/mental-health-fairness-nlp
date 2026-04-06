@@ -1,0 +1,13 @@
+model,platform_1,platform_2,auc_1,auc_2,auc_diff,se_boot_auc1,se_boot_auc2,z_stat,p_value,alpha_corrected,significant
+bert,kaggle,reddit,0.984,0.6447,0.3393,0.001284,0.00894,37.5675,0.0,0.016667,True
+bert,kaggle,twitter,0.984,0.5957,0.3883,0.001284,0.00737,51.9047,0.0,0.016667,True
+bert,reddit,twitter,0.6447,0.5957,0.049,0.00894,0.00737,4.2292,2.3e-05,0.016667,True
+roberta,kaggle,reddit,0.9865,0.6374,0.3491,0.001124,0.009107,38.0445,0.0,0.016667,True
+roberta,kaggle,twitter,0.9865,0.603,0.3835,0.001124,0.007679,49.4148,0.0,0.016667,True
+roberta,reddit,twitter,0.6374,0.603,0.0344,0.009107,0.007679,2.8878,0.00388,0.016667,True
+mentalbert,kaggle,reddit,0.9833,0.6852,0.2981,0.001289,0.009332,31.6434,0.0,0.016667,True
+mentalbert,kaggle,twitter,0.9833,0.6107,0.3726,0.001289,0.007706,47.6894,0.0,0.016667,True
+mentalbert,reddit,twitter,0.6852,0.6107,0.0745,0.009332,0.007706,6.1558,0.0,0.016667,True
+mentalroberta,kaggle,reddit,0.9848,0.7029,0.2819,0.001047,0.009231,30.3438,0.0,0.016667,True
+mentalroberta,kaggle,twitter,0.9848,0.6047,0.3801,0.001047,0.007523,50.0427,0.0,0.016667,True
+mentalroberta,reddit,twitter,0.7029,0.6047,0.0982,0.009231,0.007523,8.2464,0.0,0.016667,True

@@ -1,0 +1,13 @@
+model,platform,ECE_M5,ECE_M10,ECE_M15,ECE_M20,range_across_M
+bert,kaggle,0.0603,0.0603,0.0605,0.0606,0.0003
+bert,reddit,0.2285,0.2285,0.2285,0.2285,0.0
+bert,twitter,0.5062,0.5062,0.5062,0.5062,0.0
+roberta,kaggle,0.0563,0.0563,0.0565,0.0568,0.0005
+roberta,reddit,0.2207,0.2207,0.2207,0.2207,0.0
+roberta,twitter,0.5135,0.5135,0.5147,0.5135,0.0012
+mentalbert,kaggle,0.058,0.0583,0.0584,0.0586,0.0006
+mentalbert,reddit,0.2077,0.2077,0.2077,0.2077,0.0
+mentalbert,twitter,0.5423,0.5423,0.5423,0.5423,0.0
+mentalroberta,kaggle,0.0586,0.0587,0.0586,0.0587,0.0001
+mentalroberta,reddit,0.1955,0.1955,0.1955,0.1955,0.0
+mentalroberta,twitter,0.4993,0.4993,0.4993,0.4993,0.0

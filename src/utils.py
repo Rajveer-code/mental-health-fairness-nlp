@@ -284,6 +284,7 @@ def bootstrap_ci(
     probs: np.ndarray,
     labels: np.ndarray,
     n_boots: int = 1000,
+    seed: int = 42,
     **kwargs,
 ) -> tuple[float, float]:
     """
@@ -299,6 +300,8 @@ def bootstrap_ci(
         Integer ground-truth labels.
     n_boots : int, optional
         Number of bootstrap resamples.  Default is 1000.
+    seed : int, optional
+        Random seed for reproducibility.  Default is 42.
     **kwargs
         Additional keyword arguments forwarded to ``fn``.
 
@@ -308,7 +311,7 @@ def bootstrap_ci(
         ``(lower, upper)`` — the 2.5th and 97.5th percentiles of the
         bootstrap distribution.
     """
-    rng = np.random.default_rng()
+    rng = np.random.default_rng(seed)
     boot_vals: list[float] = []
     n = len(labels)
     for _ in range(n_boots):

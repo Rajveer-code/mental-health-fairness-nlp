@@ -124,7 +124,7 @@ def plot_combined_comparison(model_key, depression_scores, stress_scores):
     fig, axes = plt.subplots(2, 3, figsize=(18, 10))
     fig.suptitle(
         f"Depression vs Stress: Cross-Platform Feature Attribution\n"
-        f"Model: {MODEL_CONFIGS[model_key]['display']}  "
+        f"Model: {MODEL_DISPLAY[model_key]}  "
         f"— showing that both clinical classes shift to platform artefacts",
         fontsize=13, fontweight="bold"
     )

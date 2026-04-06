@@ -1,19 +1,21 @@
-# Cross-Platform Fairness Evaluation of NLP Models for Mental Health Detection
+# Cross-Platform Generalization Failure in Mental Health NLP: A Systematic Fairness Audit of Transformer Models on Social Media
 
 <div align="center">
 
-**A Peer-Reviewed Research Codebase — JBI Submission**
+**Cross-Platform Fairness Evaluation (CPFE) Framework**
 
 *Rajveer Singh Pall · Sameer Yadav*
 *Gyan Ganga Institute of Technology and Sciences, Jabalpur, India*
+
+*Submitted to the Journal of Biomedical Informatics (JBI)*
 
 ---
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![PyTorch 2.6](https://img.shields.io/badge/PyTorch-2.6.0-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![HuggingFace Transformers](https://img.shields.io/badge/%F0%9F%A4%97-Transformers-FFD21E)](https://huggingface.co/docs/transformers)
+[![HuggingFace Transformers](https://img.shields.io/badge/%F0%9F%A4%97-Transformers-FFD21E)](https://huggingface.co/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22C55E)](LICENSE)
-[![Paper: JBI](https://img.shields.io/badge/Journal-JBI%20%28under%20review%29-6366F1)](https://www.sciencedirect.com/journal/journal-of-biomedical-informatics)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000)](https://github.com/psf/black)
 
 </div>
 
@@ -21,44 +23,45 @@
 
 ## Abstract
 
-Transformer-based language models trained on curated social media corpora routinely achieve near-perfect within-distribution accuracy for mental health text classification, yet their cross-platform generalization and algorithmic fairness remain poorly characterized. This work introduces the **Cross-Platform Fairness Evaluation (CPFE) framework**, a systematic audit pipeline applied to four pre-trained language models — BERT, RoBERTa, DistilRoBERTa, and SamLowe-RoBERTa — trained on a Kaggle mental health corpus and evaluated on unseen Reddit (GoEmotions) and Twitter (dair-ai/emotion) data. We observe a consistent **29–40% macro-AUC degradation** across all models and both target platforms, with calibration error rising from ≈ 0.058 (within-platform) to ≈ 0.520 (Twitter). Fairness audits using symmetric Disparate Impact (DI) and Equalized Odds Difference (EOD) reveal systematic bias in minority class detection (anxiety, stress). Gradient-based token saliency and cross-platform Jaccard stability analysis confirm that models anchor on platform-specific linguistic artifacts rather than clinical signal. Sensitivity analyses across three independent label-mapping schemas confirm the robustness of the degradation pattern.
+Mental health classification models trained on labelled social media corpora are increasingly deployed across platforms without systematic evaluation of cross-platform generalization, calibration, or fairness. This repository implements the **Cross-Platform Fairness Evaluation (CPFE)** framework and applies it to four transformer architectures — BERT, RoBERTa, Emotion-DistilRoBERTa, and GoEmotions-RoBERTa — trained on a Kaggle mental health corpus (n = 35,556) and evaluated on Reddit (n = 6,257) and Twitter (n = 2,883) test sets using a unified four-class clinical label schema.
+
+**Key finding:** All four models exhibit macro AUC degradation of 28.6–39.5% under platform shift. Expected Calibration Error rises from 0.056–0.060 in-domain to 0.499–0.542 on Twitter. Gradient-based attribution overlap collapses to near zero (Jaccard J ≈ 0 in 14/16 model–class pairs). Disparate impact falls below 0.17 for all clinical classes on Reddit, far below the four-fifths rule threshold. These failures are robust across five label-mapping sensitivity schemes and all 12 pairwise model comparisons under Bonferroni-corrected bootstrap Z-tests.
 
 ---
 
 ## Table of Contents
 
-1. [Research Problem and Contributions](#1-research-problem-and-contributions)
+1. [Scientific Contributions](#1-scientific-contributions)
 2. [Repository Structure](#2-repository-structure)
-3. [Data and Label Schema](#3-data-and-label-schema)
+3. [Datasets and Label Schema](#3-datasets-and-label-schema)
 4. [Models](#4-models)
 5. [Key Results](#5-key-results)
-6. [Evaluation Metrics](#6-evaluation-metrics)
-7. [Setup and Installation](#7-setup-and-installation)
-8. [Reproducing the Full Pipeline](#8-reproducing-the-full-pipeline)
-9. [Extended Analyses](#9-extended-analyses-appendix-scripts)
-10. [Output Artifacts](#10-output-artifacts)
-11. [Design Principles](#11-design-principles)
+6. [Installation](#6-installation)
+7. [Reproducible Pipeline](#7-reproducible-pipeline)
+8. [Output Reference](#8-output-reference)
+9. [Evaluation Metrics](#9-evaluation-metrics)
+10. [CPFE Thresholds](#10-cpfe-thresholds)
+11. [Notes for Reviewers](#11-notes-for-reviewers)
 12. [Citation](#12-citation)
 13. [License](#13-license)
 
 ---
 
-## 1. Research Problem and Contributions
+## 1. Scientific Contributions
 
-### The Problem
+This work makes the following principal contributions:
 
-Mental health NLP models are trained and benchmarked on single-platform corpora. When deployed across different social media platforms — Reddit, Twitter, clinical forums — they encounter vocabulary shifts, demographic differences, and labelling inconsistencies that cause silent performance collapse. These failures are especially dangerous in clinical-adjacent applications where a misclassification carries real cost.
+1. **CPFE framework** — The first systematic audit combining discriminative performance, calibration, statistical significance, platform-group fairness metrics, and attribution stability in a unified five-axis evaluation protocol for mental health NLP.
 
-### Contributions
+2. **Empirical characterisation of cross-platform failure** — All four architecturally diverse transformer models exhibit macro AUC degradation of 28.6–39.5% and minimal gradient-based attribution overlap (Jaccard J ≈ 0 in 14/16 model–class pairs under gradient saliency) when transferred across social media platforms without domain adaptation.
 
-| # | Contribution |
-|---|---|
-| 1 | **CPFE Framework** — end-to-end pipeline for cross-platform fairness auditing of mental health classifiers, covering data harmonization, training, evaluation, statistical auditing, feature attribution, and sensitivity analysis |
-| 2 | **Empirical evidence of cross-platform collapse** — all four models drop 29–40% macro-AUC on unseen platforms; calibration degrades catastrophically (ECE → 0.52 on Twitter) |
-| 3 | **Clinical-grade statistical methodology** — per-class AUC with DeLong 95% CIs, Bonferroni-corrected multi-test comparisons, symmetric Disparate Impact, Equalized Odds Difference |
-| 4 | **Feature introspection** — gradient-based token saliency maps (Eqs. 8–9) and cross-platform Jaccard feature stability scores reveal platform-specific lexical anchoring |
-| 5 | **Label-mapping robustness** — stable degradation pattern confirmed across 4-class, binary, and 3-class schemas, ruling out artefact of label design |
-| 6 | **Fully reproducible** — config-driven pipeline (`configs/config.yaml`), no hardcoded paths, no magic numbers, seed-controlled randomness |
+3. **Calibration vs. discriminative performance separation** — Platform-specific temperature scaling recovers calibration (88.0% mean ECE reduction, |ΔAUC| < 0.01) but cannot restore discriminative performance, demonstrating that calibration alone is insufficient as a deployment remedy.
+
+4. **Clinical-grade fairness measurement** — Severe disparate impact violations (DI < 0.17) for all clinical classes on Reddit, with equalized odds differences exceeding 0.75 for anxiety and stress, are confirmed robust to prior-shift-adjusted DI calculations.
+
+5. **Construct validity** — Sensitivity analysis across five label-mapping schemes (A–E, spanning 4-class, binary, 3-class, and distress-superclass formulations) confirms that cross-platform degradation is not an artefact of mapping subjectivity.
+
+6. **Provisional CPFE deployment thresholds** — Data-driven deployment readiness criteria (ΔAUC < 15% acceptable; > 30% severe) grounded in observed degradation patterns, proposed as starting points for community standardisation pending external validation.
 
 ---
 
@@ -68,341 +71,459 @@ Mental health NLP models are trained and benchmarked on single-platform corpora.
 mental-health-fairness-nlp/
 │
 ├── configs/
-│   └── config.yaml                        # Single source of truth: all paths, hyperparameters,
-│                                          # fairness thresholds, seeds
+│   └── config.yaml                    ← single source of truth for all paths and hyperparameters
 │
 ├── data/
 │   ├── raw/
 │   │   ├── kaggle_mental_health/
-│   │   │   └── Combined Data.csv          # 53 K samples, 7 original labels
-│   │   ├── reddit_goemotions/             # HuggingFace cache (28-class GoEmotions)
-│   │   └── twitter_emotion/              # HuggingFace cache (dair-ai/emotion, 6-class)
+│   │   │   └── Combined Data.csv      ← 53,470 samples, 7 original labels
+│   │   ├── reddit_goemotions/         ← HuggingFace GoEmotions cache (58,009 comments)
+│   │   └── twitter_emotion/           ← HuggingFace dair-ai/emotion cache (20,000 tweets)
 │   └── splits/
 │       └── cross_platform/
-│           ├── train.csv                  # Kaggle train split (stratified)
-│           ├── val.csv                    # Kaggle validation split
-│           ├── test_kaggle.csv            # Within-distribution test
-│           ├── test_reddit.csv            # Cross-platform test 1
-│           └── test_twitter.csv           # Cross-platform test 2
+│           ├── train.csv              ← Kaggle training set (n = 35,556)
+│           ├── val.csv                ← Kaggle validation set (n = 7,620)
+│           ├── test_kaggle.csv        ← Within-platform test (n = 7,620)
+│           ├── test_reddit.csv        ← Cross-platform test 1 (n = 6,257)
+│           └── test_twitter.csv       ← Cross-platform test 2 (n = 2,883)
 │
 ├── src/
-│   ├── utils.py                           # Canonical constants + 8 shared utility functions
-│   ├── preprocess.py                      # Data loading, text cleaning, label remapping, splits
-│   ├── train.py                           # Fine-tuning loop with early stopping + checkpointing
-│   ├── evaluate.py                        # Cross-platform inference → per-sample prediction CSVs
-│   ├── fairness_audit.py                  # DeLong AUC, ECE, Bonferroni, DI, EOD, calibration curves
-│   ├── shap_analysis.py                   # Gradient saliency maps + Jaccard cross-platform stability
-│   ├── sensitivity_analysis.py            # Label-mapping robustness (4-class / binary / 3-class)
-│   ├── gpt_eval.py                        # GPT-4 evaluation stub (future work)
-│   │
-│   │   ── Appendix / Extended analyses ──────────────────────────────────────────────────────
-│   ├── code_A1_di_eod_analysis.py         # Symmetric DI and EOD heatmaps (Eq. 6)
-│   ├── code_A2_stress_attribution.py      # Stress-class gradient attribution across platforms
-│   ├── code_A3_A4_A6_ece_jaccard.py       # ECE bootstrap CIs + binning sensitivity + Jaccard
-│   ├── code_A4_patch_attribution.py       # Per-class patch-level token attribution
-│   ├── code_A5_temperature_scaling.py     # Post-hoc temperature calibration
-│   ├── fix_di_symmetric.py                # [DEPRECATED] DI formula fix — backported into A1
-│   ├── jaccard_full_analysis.py           # Full cross-platform Jaccard stability (RoBERTa)
-│   ├── label_sensitivity_mappings_DE.py   # Label sensitivity mappings D and E
-│   ├── perclass_ece_analysis.py           # Per-class calibration error breakdown
-│   └── truncation_audit.py               # Token-length truncation vs. prediction error analysis
+│   ├── utils.py                       ← CANONICAL: all shared constants, loaders, metrics
+│   ├── preprocess.py                  ← Data loading, cleaning, label mapping, splitting
+│   ├── train.py                       ← Fine-tuning loop; supports --seeds for multi-seed runs
+│   ├── evaluate.py                    ← Cross-platform inference, prediction CSVs, master results
+│   ├── fairness_audit.py              ← AUC/ECE/DI/EOD audit; between-model significance tests
+│   ├── shap_analysis.py               ← Gradient saliency attribution; cross-platform comparison
+│   ├── sensitivity_analysis.py        ← Label-mapping robustness (A–E); integrates D/E mappings
+│   ├── truncation_audit.py            ← Token-length diagnostics; exact tokenizer truncation rates
+│   ├── jaccard_full_analysis.py       ← Feature stability; within-platform split-half baseline
+│   ├── perclass_ece_analysis.py       ← Per-class ECE (one-vs-rest, Eq. 5b)
+│   ├── code_A1_di_eod_analysis.py     ← DI/EOD heatmaps; prior-shift-adjusted DI
+│   ├── code_A2_stress_attribution.py  ← Stress-class gradient attribution figures
+│   ├── code_A3_A4_A6_ece_jaccard.py   ← ECE bootstrap CIs; Jaccard K-sensitivity; ECE bin-sensitivity
+│   ├── code_A4_patch_attribution.py   ← Patch-level (phrase) gradient attribution
+│   ├── code_A5_temperature_scaling.py ← Temperature scaling recalibration (bounds 0.1–20.0)
+│   ├── fix_di_symmetric.py            ← (deprecated patch) symmetric DI formula; backported to A1
+│   ├── gpt_eval.py                    ← Stub for GPT-4 qualitative label evaluation
+│   └── label_sensitivity_mappings_DE.py ← Mappings D (distress superclass) and E (alternative)
 │
 ├── outputs/
-│   ├── models/                            # Fine-tuned checkpoints (bert/, roberta/, ...)
+│   ├── models/
+│   │   ├── bert/                      ← Fine-tuned BERT checkpoint
+│   │   ├── roberta/                   ← Fine-tuned RoBERTa checkpoint
+│   │   ├── mentalbert/                ← Fine-tuned Emotion-DistilRoBERTa checkpoint
+│   │   └── mentalroberta/             ← Fine-tuned GoEmotions-RoBERTa checkpoint
 │   ├── results/
-│   │   ├── master_results.csv             # Per-model × per-platform aggregate metrics
-│   │   ├── {model}_eval.json              # Per-model evaluation details
-│   │   ├── fairness/                      # Fairness audit tables and bootstrap CIs
-│   │   └── sensitivity/                   # Label-mapping robustness results
-│   └── figures/                           # All paper figures (PNG, 300 dpi)
-│       ├── figure1_forest_plot.png
-│       ├── figure2_platform_degradation.png
-│       ├── figure3_calibration_curves.png
-│       ├── figure4_f1_heatmap.png
-│       ├── figure5_*_shap_cross_platform.png
-│       ├── figure6_feature_stability.png
-│       ├── figure7_sensitivity_analysis.png
-│       └── figure8_sensitivity_heatmap.png
+│   │   ├── master_results.csv
+│   │   ├── {model}_eval.json          ← 4 files
+│   │   ├── {model}_{platform}_predictions.csv  ← 12 files (columns: label, pred, prob_*, correct)
+│   │   ├── fairness/
+│   │   │   ├── fairness_audit_full.csv
+│   │   │   ├── pairwise_auc_comparisons.csv
+│   │   │   ├── between_model_auc_reddit.csv
+│   │   │   ├── between_model_auc_twitter.csv
+│   │   │   ├── di_eod_table.csv
+│   │   │   ├── perclass_ece.csv
+│   │   │   ├── jaccard_full_analysis.csv
+│   │   │   ├── temperature_scaling_results.csv
+│   │   │   ├── clinical_signal_retention.csv
+│   │   │   ├── truncation_exact_rates.csv
+│   │   │   ├── ece_bootstrap_cis.csv
+│   │   │   ├── ece_binning_sensitivity.csv
+│   │   │   └── jaccard_k_sensitivity.csv
+│   │   └── sensitivity/
+│   │       ├── sensitivity_full_results.csv
+│   │       └── sensitivity_drops.csv
+│   ├── figures/                       ← 28+ publication-quality PNG figures
+│   └── CPFE_Manuscript_Revised.docx   ← Revised manuscript (post peer-review toning)
 │
 ├── requirements.txt
-└── README.md                              # This file
+├── README.md                          ← this file
+└── LICENSE
 ```
 
 ---
 
-## 3. Data and Label Schema
+## 3. Datasets and Label Schema
 
 ### 3.1 Source Datasets
 
-| Platform | Dataset | Split Role | Samples | Original Labels |
-|---|---|---|---|---|
-| Kaggle | [Mental Health Corpus](https://www.kaggle.com/datasets/suchintikasarkar/sentiment-analysis-for-mental-health) | Train + within-test | ~53 K | 7 (normal, depression, suicidal, anxiety, stress, bipolar, personality disorder) |
-| Reddit | [GoEmotions](https://huggingface.co/datasets/google-research-datasets/go_emotions) | Cross-platform test 1 | ~54 K | 28 fine-grained emotions |
-| Twitter | [dair-ai/emotion](https://huggingface.co/datasets/dair-ai/emotion) | Cross-platform test 2 | ~20 K | 6 basic emotions |
+| Platform | Dataset | Source | Split Used | n (after mapping) |
+|----------|---------|--------|------------|-------------------|
+| Kaggle | Mental Health Corpus | [Kaggle](https://www.kaggle.com/) | Train + within-test | 35,556 train / 7,620 test |
+| Reddit | GoEmotions | [Demszky et al., 2020](https://github.com/google-research/google-research/tree/master/goemotions) | Test only | 6,257 |
+| Twitter | dair-ai/emotion | [HuggingFace](https://huggingface.co/datasets/dair-ai/emotion) | Test only | 2,883 |
 
-### 3.2 Unified 4-Class Schema
+> **Contamination note:** GoEmotions-RoBERTa and Emotion-DistilRoBERTa have pretraining exposure to Reddit/Twitter data; their cross-platform figures represent conservative upper bounds rather than true out-of-domain benchmarks. See Limitations in the manuscript.
 
-All three datasets are harmonized into a single label space:
+### 3.2 Unified Four-Class Schema
 
-| ID | Class | Clinical Interpretation | Kaggle Source Labels |
-|---|---|---|---|
-| 0 | `normal` | No clinical signal | normal |
-| 1 | `depression` | Depressive disorders | depression, suicidal, bipolar |
-| 2 | `anxiety` | Anxiety-spectrum | anxiety |
-| 3 | `stress` | Stress-related | stress, personality disorder |
+| Class ID | Label | Clinical meaning |
+|----------|-------|-----------------|
+| 0 | normal | No clinical signal |
+| 1 | depression | Primary affective distress class |
+| 2 | anxiety | Anxiety-related distress |
+| 3 | stress | Stress/anger-related distress |
 
-> **Class imbalance**: depression ≈ 56.6%, normal ≈ 29%, anxiety ≈ 7%, stress ≈ 7%. Imbalance is not artificially corrected — it reflects the real-world distribution of the training corpus.
+### 3.3 Platform-Specific Label Mappings
 
-Remapping logic lives entirely in `src/preprocess.py` (`KAGGLE_TO_UNIFIED`, `GOEMO_TO_UNIFIED`, `DAIREMO_TO_UNIFIED`). It is not duplicated elsewhere.
+**Kaggle → unified** (`KAGGLE_TO_UNIFIED` in `preprocess.py`):
 
-### 3.3 Sensitivity Label Schemas (Appendix)
+| Original label | Unified | Notes |
+|----------------|---------|-------|
+| Normal | normal | |
+| Depression | depression | |
+| Suicidal | depression | Approximation: suicidal ideation often co-occurs with depressive episodes, though clinically distinct under DSM-5 |
+| Anxiety | anxiety | |
+| Bipolar | depression | Mapped to affective distress category |
+| Stress | stress | |
+| Personality disorder | stress | Approximation |
 
-| Schema | Description | Script |
-|---|---|---|
-| A (primary) | 4-class as above | `sensitivity_analysis.py` |
-| B | Binary: normal vs. any mental health | `sensitivity_analysis.py` |
-| C | 3-class: normal / depression / distress (anxiety+stress) | `sensitivity_analysis.py` |
-| D | Alternative 4-class remapping | `label_sensitivity_mappings_DE.py` |
-| E | Alternative 4-class remapping | `label_sensitivity_mappings_DE.py` |
+**Reddit (GoEmotions) → unified** (multi-label, ambiguous examples removed):
+
+| GoEmotions labels | Unified |
+|-------------------|---------|
+| sadness, grief, remorse, disappointment | depression |
+| nervousness, fear, anxiety | anxiety |
+| anger, annoyance, frustration | stress |
+| all remaining (27 categories) | normal |
+
+**Twitter (dair-ai/emotion) → unified**:
+
+| Twitter labels | Unified |
+|----------------|---------|
+| sadness | depression |
+| fear | anxiety |
+| anger | stress |
+| joy, surprise, love | normal |
+
+### 3.4 Label Sensitivity Mappings (A–E)
+
+Five mapping schemes are tested to confirm robustness to construct validity concerns:
+
+| Scheme | Description |
+|--------|-------------|
+| A | Primary 4-class schema (above) |
+| B | Binary: normal vs. any mental health signal |
+| C | 3-class: normal / depression / distress (anxiety + stress merged) |
+| D | Distress superclass: collapses anxiety + stress into a single distress category, removing the most clinically ambiguous distinction |
+| E | Alternative conservative mapping: narrower clinical vocabulary, stricter normal criteria |
 
 ---
 
 ## 4. Models
 
-| Key | HuggingFace Model ID | Paper Alias | Pre-training Domain |
-|---|---|---|---|
-| `bert` | `bert-base-uncased` | BERT | General English (BookCorpus + Wikipedia) |
-| `roberta` | `roberta-base` | RoBERTa | General English (160 GB corpus) |
-| `mentalbert` | `j-hartmann/emotion-english-distilroberta-base` | DistilRoBERTa | Emotion corpora (distilled) |
-| `mentalroberta` | `SamLowe/roberta-base-go_emotions` | SamLowe-RoBERTa | GoEmotions (27-class fine-tuned) |
+| Key | HuggingFace ID | Display Name | Parameters | Pre-training Domain |
+|-----|----------------|--------------|------------|---------------------|
+| `bert` | `bert-base-uncased` | BERT | 110 M | General English |
+| `roberta` | `roberta-base` | RoBERTa | 125 M | General English |
+| `mentalbert` | `j-hartmann/emotion-english-distilroberta-base` | Emotion-DistilRoBERTa | 82 M | Emotion data (inc. Twitter) |
+| `mentalroberta` | `SamLowe/roberta-base-go_emotions` | GoEmotions-RoBERTa | 125 M | GoEmotions Reddit |
 
-All models are fine-tuned with identical hyperparameters for a controlled comparison:
+**Training hyperparameters** (from `configs/config.yaml`):
 
 | Hyperparameter | Value |
-|---|---|
+|----------------|-------|
 | `max_length` | 64 tokens |
 | `batch_size` | 16 |
 | `learning_rate` | 2 × 10⁻⁵ |
 | `epochs` | 5 |
-| `seed` | 42 |
-| Optimizer | AdamW |
+| `seed` | 42 (default) |
+| `optimizer` | AdamW |
+| `loss` | Cross-entropy |
 
 ---
 
 ## 5. Key Results
 
-### 5.1 Macro-AUC (with 95% DeLong CI)
+### 5.1 Discriminative Performance (Macro AUC)
 
-| Model | Kaggle (within-dist.) | Reddit (cross-platform) | Twitter (cross-platform) | Drop: Kaggle → Twitter |
-|---|---|---|---|---|
-| BERT | 0.983 | 0.699 | 0.605 | **−37.7%** |
-| RoBERTa | 0.987 | 0.689 | 0.601 | **−39.1%** |
-| DistilRoBERTa | 0.985 | 0.637 | 0.598 | **−39.3%** |
-| SamLowe-RoBERTa | 0.984 | 0.629 | 0.596 | **−39.4%** |
+| Model | Kaggle (in-domain) | Reddit (cross-platform) | Twitter (cross-platform) | Max ΔAUC |
+|-------|--------------------|------------------------|--------------------------|----------|
+| BERT | 0.983 | 0.699 | 0.605 | 37.8% |
+| RoBERTa | 0.985 | 0.629 | 0.596 | 38.9% |
+| Emotion-DistilRoBERTa | 0.986 | 0.693 | 0.596 | 39.0% |
+| GoEmotions-RoBERTa | 0.987 | 0.699 | 0.596 | 39.1% |
 
-> Clinical threshold: cross-platform AUC drop > 20% is concerning; > 35% is unacceptable for deployment in clinical-adjacent applications.
-
-### 5.2 Expected Calibration Error (ECE ↓ lower is better)
+### 5.2 Calibration (Expected Calibration Error, M = 10)
 
 | Model | Kaggle | Reddit | Twitter |
-|---|---|---|---|
-| BERT | 0.056 | 0.218 | 0.499 |
-| RoBERTa | 0.058 | 0.231 | 0.521 |
-| DistilRoBERTa | 0.060 | 0.244 | 0.537 |
-| SamLowe-RoBERTa | 0.059 | 0.238 | 0.542 |
+|-------|--------|--------|---------|
+| BERT | 0.059 | 0.271 | 0.542 |
+| RoBERTa | 0.060 | 0.264 | 0.499 |
+| Emotion-DistilRoBERTa | 0.056 | 0.275 | 0.536 |
+| GoEmotions-RoBERTa | 0.057 | 0.268 | 0.531 |
 
-> ECE = 0.0 is perfect calibration; ECE ≈ 0.5 is equivalent to random confidence assignment.
+After platform-specific temperature scaling: mean ECE reduction of **88.0%**, |ΔAUC| < 0.01.
 
-### 5.3 Fairness Metrics (Symmetric Disparate Impact)
+### 5.3 Fairness (Symmetric Disparate Impact, Reddit)
 
-- Symmetric DI < 0.80 for minority classes (anxiety, stress) across all models and platforms — violates the 80% rule.
-- EOD > 0.15 for stress class on Twitter for all models.
-- Post-hoc temperature scaling reduces ECE by ≈ 40% on Reddit but does not close the cross-platform AUC gap.
+DI < 0.17 for all clinical classes across all four models. Maximum EOD for depression: 0.830 (RoBERTa). These violations persist after prior-shift adjustment.
 
-### 5.4 Feature Stability (Jaccard)
+### 5.4 Attribution Stability (Jaccard Similarity, K = 10)
 
-| Comparison | Jaccard (top-20 tokens) |
-|---|---|
-| Within-platform (Kaggle train → test) | 0.62–0.71 |
-| Cross-platform (Kaggle → Reddit) | 0.18–0.26 |
-| Cross-platform (Kaggle → Twitter) | **0.08–0.14** |
+Jaccard J ≈ 0 in **14/16** model–class pairs on Kaggle-to-Twitter comparisons under gradient saliency. Within-platform split-half baseline: J ≈ 0.30–0.50.
 
-Near-zero cross-platform token overlap confirms that models anchor on platform-specific vocabulary and slang, not on clinically meaningful terms.
+### 5.5 Statistical Significance
+
+All 12 pairwise model AUC comparisons (Reddit, Twitter) reach statistical significance under Bonferroni-corrected bootstrap Z-tests (α/6 ≈ 0.0083).
 
 ---
 
-## 6. Evaluation Metrics
+## 6. Installation
 
-| Metric | Symbol | Reference | Interpretation |
-|---|---|---|---|
-| Macro-AUC | AUC | Eq. 1 | Discriminative power across all classes; 1.0 = perfect, 0.5 = random |
-| DeLong Confidence Interval | CI | Eq. 2 | Non-parametric 95% CI around AUC for statistical significance testing |
-| Expected Calibration Error | ECE | Eq. 5 | Probability reliability; 0.0 = perfectly calibrated, 0.5 = random |
-| Disparate Impact (symmetric) | DI | Eq. 6 | `min(r, 1/r)` bounded in (0, 1]; < 0.80 indicates disparate treatment |
-| Equalized Odds Difference | EOD | Eq. 7 | True positive rate parity across demographic proxy groups |
-| Gradient Token Importance | — | Eqs. 8–9 | L2-norm of `∂ŷ/∂emb`, normalized per text; identifies salient tokens |
-| Jaccard Feature Stability | J | — | `\|A ∩ B\| / \|A ∪ B\|` for top-K token sets compared across platforms |
+### Requirements
 
-> **Correctness note on DI**: The common asymmetric formula `rate_tgt / rate_ref` can exceed 1.0 and is direction-dependent, making it uninterpretable as a parity measure. This codebase exclusively uses the symmetric form `min(r, 1/r)` which constrains DI to (0, 1] regardless of group assignment order.
-
----
-
-## 7. Setup and Installation
-
-### 7.1 Prerequisites
-
-- Python 3.10 or higher
-- CUDA-capable GPU recommended (CPU is very slow for attribution scripts)
+- Python 3.10 or later
+- CUDA-capable GPU recommended for training (CPU inference supported)
 - ~10 GB disk space for model checkpoints
 
-### 7.2 Clone and Install
+### Setup
 
 ```bash
 git clone https://github.com/Rajveer-code/mental-health-fairness-nlp.git
 cd mental-health-fairness-nlp
 
-# Create a virtual environment
+# Create and activate virtual environment
 python -m venv .venv
 source .venv/bin/activate        # Linux / macOS
-# OR
 .venv\Scripts\activate           # Windows
 
-# Install all dependencies
+# Install dependencies
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### 7.3 Data Preparation
+### Data Download
 
-Place the Kaggle dataset at:
+Kaggle data must be placed manually at `data/raw/kaggle_mental_health/Combined Data.csv` (available at the Kaggle dataset link in the manuscript references).
 
+Reddit and Twitter datasets are downloaded automatically by `preprocess.py` via HuggingFace Datasets on first run:
+```bash
+python src/preprocess.py   # downloads GoEmotions and dair-ai/emotion on first run
 ```
-data/raw/kaggle_mental_health/Combined Data.csv
-```
-
-The Reddit (GoEmotions) and Twitter (dair-ai/emotion) datasets are downloaded automatically from HuggingFace Hub on the first run of `preprocess.py`.
 
 ---
 
-## 8. Reproducing the Full Pipeline
+## 7. Reproducible Pipeline
 
-Run steps **in order**. Each step reads from the output of the previous one.
+All scripts are run from the repository root. All paths and hyperparameters are controlled by `configs/config.yaml`.
+
+### 7.1 Stage 1 — Data Preparation
 
 ```bash
-# Step 1 — Preprocessing
-# Cleans text, remaps labels across all three corpora, creates stratified splits
 python src/preprocess.py
+```
+- Downloads and caches Reddit/Twitter datasets via HuggingFace
+- Applies platform-specific label mappings and `clean_text()` preprocessing
+- Writes `data/splits/cross_platform/{train,val,test_kaggle,test_reddit,test_twitter}.csv`
 
-# Step 2 — Training  (≈2–4 hours per model on a single GPU)
-# Fine-tunes all 4 models; saves best checkpoints to outputs/models/
-python src/train.py
+### 7.2 Stage 2 — Model Training
 
-# Step 3 — Cross-platform evaluation
-# Runs inference on Kaggle / Reddit / Twitter test sets for all models
-# Writes per-sample prediction CSVs to outputs/results/
+```bash
+# Train all four models (default seed = 42)
+python src/train.py --model all
+
+# Optional: multi-seed training for variance estimation
+python src/train.py --model all --seeds 42 43 44
+```
+- Saves best checkpoints (by validation AUC) to `outputs/models/{model}/`
+- Writes `{model}_training_history.csv` with epoch-level metrics
+
+### 7.3 Stage 3 — Cross-Platform Evaluation
+
+```bash
 python src/evaluate.py
+```
+- Runs inference on all three test sets for all four models
+- Outputs `outputs/results/{model}_{platform}_predictions.csv`
+  (columns: `label, pred, prob_normal, prob_depression, prob_anxiety, prob_stress, correct`)
+- Writes `outputs/results/master_results.csv` (summary AUC / F1 / ECE)
 
-# Step 4 — Fairness audit  (produces Figures 1–4)
-# DeLong AUC with CIs, ECE calibration curves, Bonferroni tests, DI, EOD
+### 7.4 Stage 4 — Core Fairness Audit
+
+```bash
 python src/fairness_audit.py
+```
+- Macro AUC with 95% bootstrap confidence intervals (B = 2000)
+- Expected Calibration Error (10 equal-width bins)
+- Bonferroni-corrected pairwise AUC comparisons
+- Between-model AUC significance tests on Reddit and Twitter
+- Outputs to `outputs/results/fairness/`
 
-# Step 5 — Feature attribution  (produces Figures 5–6)
-# Gradient-based token saliency maps + cross-platform Jaccard stability
+### 7.5 Stage 5 — Extended Analyses
+
+Run these in any order after Stage 4:
+
+```bash
+# Disparate Impact and Equalized Odds Difference (with prior-shift-adjusted DI)
+python src/code_A1_di_eod_analysis.py
+
+# Gradient saliency attribution and cross-platform feature comparison
 python src/shap_analysis.py
 
-# Step 6 — Label-mapping sensitivity  (produces Figures 7–8)
-# Validates degradation pattern across 4-class / binary / 3-class label schemas
+# Feature stability analysis (Jaccard with within-platform split-half baseline)
+python src/jaccard_full_analysis.py
+
+# Label-mapping robustness (Mappings A–E, integrates D/E automatically)
 python src/sensitivity_analysis.py
+
+# Token-length truncation analysis (exact tokenizer-based)
+python src/truncation_audit.py
+
+# Per-class calibration breakdown (one-vs-rest ECE)
+python src/perclass_ece_analysis.py
+
+# Temperature scaling recalibration
+python src/code_A5_temperature_scaling.py
+
+# Stress-class attribution figures
+python src/code_A2_stress_attribution.py
+
+# ECE bootstrap CIs, Jaccard K-sensitivity, ECE binning sensitivity
+python src/code_A3_A4_A6_ece_jaccard.py
 ```
 
-All file paths are resolved from `configs/config.yaml`. No script contains hardcoded paths or magic numbers.
+### 7.6 Complete One-Shot Command Sequence
+
+```bash
+python src/preprocess.py && \
+python src/train.py --model all && \
+python src/evaluate.py && \
+python src/fairness_audit.py && \
+python src/code_A1_di_eod_analysis.py && \
+python src/shap_analysis.py && \
+python src/jaccard_full_analysis.py && \
+python src/sensitivity_analysis.py && \
+python src/truncation_audit.py && \
+python src/perclass_ece_analysis.py && \
+python src/code_A5_temperature_scaling.py && \
+python src/code_A2_stress_attribution.py && \
+python src/code_A3_A4_A6_ece_jaccard.py
+```
 
 ---
 
-## 9. Extended Analyses (Appendix Scripts)
+## 8. Output Reference
 
-These scripts reproduce appendix results and supplementary figures. They are independent of each other and can be run after Step 3.
-
-| Script | Output | Appendix Section |
-|---|---|---|
-| `src/code_A1_di_eod_analysis.py` | Symmetric DI and EOD heatmaps across all models × platforms × classes | A.1 |
-| `src/code_A2_stress_attribution.py` | Stress-class gradient attribution comparison (all 4 models) | A.2 |
-| `src/code_A3_A4_A6_ece_jaccard.py` | ECE bootstrap CIs, binning sensitivity, extended Jaccard | A.3, A.4, A.6 |
-| `src/code_A4_patch_attribution.py` | Per-class patch-level token attribution (gradient × embedding) | A.4 |
-| `src/code_A5_temperature_scaling.py` | Post-hoc temperature scaling; before/after ECE comparison | A.5 |
-| `src/perclass_ece_analysis.py` | Per-class calibration breakdown (normal / depression / anxiety / stress) | A.7 |
-| `src/truncation_audit.py` | AUC vs. token-length quartile; truncation error correlations | A.8 |
-| `src/jaccard_full_analysis.py` | Full pairwise Jaccard stability analysis (RoBERTa, all platform pairs) | A.6 |
-| `src/label_sensitivity_mappings_DE.py` | Alternative label remapping schemas D and E | A.9 |
-
----
-
-## 10. Output Artifacts
-
-### Figures (`outputs/figures/`)
-
-| File | Paper Reference | Description |
-|---|---|---|
-| `figure1_forest_plot.png` | Figure 1 | Per-class AUC forest plot with 95% DeLong CIs |
-| `figure2_platform_degradation.png` | Figure 2 | Cross-platform macro-AUC degradation (all 4 models) |
-| `figure3_calibration_curves.png` | Figure 3 | Reliability diagrams: within vs. cross-platform calibration |
-| `figure4_f1_heatmap.png` | Figure 4 | Per-class F1 heatmap: model × platform × class |
-| `figure5_*_shap_cross_platform.png` | Figure 5 | Per-model gradient saliency word clouds (cross-platform) |
-| `figure5_stress_combined_comparison.png` | Figure 5 | Stress-class attribution comparison across all 4 models |
-| `figure6_feature_stability.png` | Figure 6 | Cross-platform Jaccard feature stability |
-| `figure7_sensitivity_analysis.png` | Figure 7 | Label-mapping robustness: AUC across 3 schemas |
-| `figure8_sensitivity_heatmap.png` | Figure 8 | Sensitivity heatmap: model × platform × schema |
-| `figure_di_heatmap_symmetric.png` | Appendix A.1 | Symmetric Disparate Impact heatmap |
-| `figure_eod_heatmap.png` | Appendix A.1 | Equalized Odds Difference heatmap |
-| `figure_ece_bootstrap_cis.png` | Appendix A.3 | ECE with 95% bootstrap CI error bars |
-| `figure_recalibration.png` | Appendix A.5 | Temperature scaling before/after calibration curves |
-| `figure_perclass_ece_heatmap.png` | Appendix A.7 | Per-class ECE breakdown heatmap |
-| `figure_clinical_vocabulary_heatmap.png` | Appendix A.8 | Clinical term retention rate across platforms |
-
-### Tables (`outputs/results/`)
+### 8.1 Primary Results
 
 | File | Description |
-|---|---|
-| `master_results.csv` | Primary results: model × platform × all metrics |
-| `fairness/fairness_audit_full.csv` | Complete fairness audit with DeLong CIs |
-| `fairness/di_eod_table_symmetric.csv` | Symmetric DI and EOD per class × platform |
-| `fairness/ece_bootstrap_cis.csv` | ECE with 95% bootstrap CIs |
-| `fairness/temperature_scaling_results.csv` | Pre/post temperature scaling ECE |
-| `fairness/perclass_ece.csv` | Per-class calibration error breakdown |
-| `fairness/jaccard_full_analysis.csv` | Pairwise platform Jaccard scores per model |
-| `sensitivity/sensitivity_full_results.csv` | Mapping robustness: AUC per schema × model |
-| `sensitivity/sensitivity_drops_all_mappings.csv` | AUC drop per model per label schema |
+|------|-------------|
+| `outputs/results/master_results.csv` | AUC, F1, ECE for all model × platform combinations |
+| `outputs/results/{model}_eval.json` | Per-model evaluation summary |
+| `outputs/results/{model}_{platform}_predictions.csv` | Per-sample predictions (12 files) |
+
+### 8.2 Fairness Audit Outputs
+
+| File | Description |
+|------|-------------|
+| `fairness/fairness_audit_full.csv` | AUC CIs, ECE, all models × platforms |
+| `fairness/pairwise_auc_comparisons.csv` | Within-model cross-platform Z-tests |
+| `fairness/between_model_auc_reddit.csv` | Between-model AUC tests on Reddit (6 pairs) |
+| `fairness/between_model_auc_twitter.csv` | Between-model AUC tests on Twitter (6 pairs) |
+| `fairness/di_eod_table.csv` | Symmetric DI and EOD, raw + prior-shift-adjusted |
+| `fairness/perclass_ece.csv` | Per-class calibration (one-vs-rest) |
+| `fairness/jaccard_full_analysis.csv` | Jaccard J for all model–class–platform pairs + within-platform baseline |
+| `fairness/temperature_scaling_results.csv` | Optimal temperature, pre/post ECE |
+| `fairness/truncation_exact_rates.csv` | Exact tokenizer-based truncation rates |
+| `fairness/clinical_signal_retention.csv` | Clinical vocabulary retention in top-10 attribution tokens |
+| `fairness/ece_bootstrap_cis.csv` | ECE bootstrap 95% CIs |
+| `fairness/ece_binning_sensitivity.csv` | ECE across M = 5, 10, 15, 20 bins |
+| `fairness/jaccard_k_sensitivity.csv` | Jaccard across K = 5, 10, 15, 20 |
+
+### 8.3 Sensitivity Analysis Outputs
+
+| File | Description |
+|------|-------------|
+| `sensitivity/sensitivity_full_results.csv` | AUC × mapping scheme (A–E) × model × platform |
+| `sensitivity/sensitivity_drops.csv` | Cross-platform ΔAUC per mapping scheme |
+
+### 8.4 Figures
+
+All figures are saved to `outputs/figures/` at ≥ 150 DPI.
+
+| Figure | Description |
+|--------|-------------|
+| `figure1_forest_plot.png` | Per-class AUC forest plot with 95% CIs |
+| `figure2_platform_degradation.png` | AUC degradation across platforms |
+| `figure3_calibration_curves.png` | Reliability diagrams before/after temperature scaling |
+| `figure4_f1_heatmap.png` | Per-class F1 heatmap (all models × platforms) |
+| `figure5_{model}_gradient_cross_platform.png` | Gradient saliency cross-platform comparison (4 files) |
+| `figure6_jaccard_with_baseline.png` | Jaccard stability heatmap with within-platform baseline |
+| `figure7_sensitivity_analysis.png` | Cross-platform ΔAUC across mapping schemes A–E |
+| `figure8_sensitivity_heatmap.png` | AUC sensitivity heatmap |
+| `figure_di_eod_heatmap.png` | Disparate impact and EOD heatmap |
+| `figure_perclass_ece_heatmap.png` | Per-class ECE heatmap |
+| `figure_recalibration.png` | ECE before and after temperature scaling |
 
 ---
 
-## 11. Design Principles
+## 9. Evaluation Metrics
 
-This codebase is held to the standards of a Q1 biomedical informatics submission:
+| Metric | Definition | Threshold (CPFE) |
+|--------|-----------|-----------------|
+| **Macro AUC** | Average one-vs-rest AUC across four classes; insensitive to class imbalance | ΔAUC > 30% = severe |
+| **ECE** | Expected Calibration Error, M = 10 equal-width bins; measures probability reliability | — |
+| **Symmetric DI** | min(P(ŷ=c\|G=A) / P(ŷ=c\|G=B), reciprocal); range (0,1] | < 0.80 = violation; < 0.50 = severe |
+| **EOD** | \|TPR_c(ref) − TPR_c(target)\|; measures equalized odds gap | > 0.20 = notable |
+| **Jaccard J** | \|top-K features platform A ∩ top-K features platform B\| / \|union\|; K = 10 | < 0.20 = unstable |
+| **Bootstrap Z-test** | Z = (AUC₁ − AUC₂) / √(SE₁² + SE₂²); Bonferroni-corrected at α/n_comparisons | p < 0.0083 (k=6) |
 
-| Principle | Implementation |
-|---|---|
-| **Single source of truth** | All constants (`MODELS`, `PLATFORMS`, `CLASSES`, `PROB_COLS`, etc.) defined once in `src/utils.py`; no script redefines them |
-| **Config-driven** | All file paths and hyperparameters live in `configs/config.yaml`; no script has hardcoded paths |
-| **Reproducibility** | Fixed `seed = 42` throughout; deterministic stratified splits; version-pinned `requirements.txt` |
-| **Statistical rigour** | DeLong CIs (non-parametric), Bonferroni correction, bootstrap CIs for ECE — no uncorrected p-values |
-| **Correct fairness math** | Symmetric DI `min(r, 1/r)` — the asymmetric `rate_tgt / rate_ref` is mathematically incorrect and explicitly rejected |
-| **No deprecated APIs** | No `pd.DataFrame.append()`, no deprecated sklearn patterns; all functions have NumPy-style docstrings |
-| **PEP 8 compliance** | Enforced throughout; 88-character line limit (Black-compatible) |
+Reference platform for DI and EOD comparisons: **Kaggle**.
+
+---
+
+## 10. CPFE Thresholds
+
+Provisional pre-deployment readiness criteria derived from this study. **These thresholds require external validation before informing policy or regulatory decisions.**
+
+| Axis | Threshold | Severity |
+|------|-----------|----------|
+| **ΔAUC** | < 15% | Acceptable |
+| **ΔAUC** | 15–30% | Moderate — recalibration and monitoring required |
+| **ΔAUC** | > 30% | Severe — deployment on a new platform without domain-specific retraining carries substantial discriminative performance risk |
+| **Jaccard J** | ≥ 0.20 at K = 10 | Minimum for attribution stability |
+| **Disparate Impact** | ≥ 0.80 | Minimum for four-fifths rule compliance |
+
+---
+
+## 11. Notes for Reviewers
+
+### For Journal Reviewers (JBI)
+
+- All analysis code is deterministic: random seeds are fixed globally via `configs/config.yaml` (`seed: 42`), and all bootstrap procedures use `np.random.default_rng(seed)`.
+- The symmetric DI formula `min(a/b, b/a)` is used throughout (not the asymmetric `a/b` formulation), ensuring platform-direction invariance.
+- Temperature scaling is applied to raw pre-softmax logits, not log-softmax outputs, as required for calibration correctness.
+- The GoEmotions test split is used exclusively (no train/validation contamination); multi-label conflicts are resolved by dropping ambiguous examples.
+- Gradient saliency (`∂P(class)/∂embedding`) is used for attribution — **not** SHAP/Shapley values. The Limitations section in the manuscript discusses this constraint.
+- ECE is computed with M = 10 equal-width bins; sensitivity to M is reported in `fairness/ece_binning_sensitivity.csv`.
+
+### For Admissions Committees (ETH Zürich, Cambridge, Oxford, and other universities)
+
+This project demonstrates the following research engineering competencies:
+
+- **End-to-end ML pipeline:** raw data ingestion → label harmonisation → multi-model fine-tuning → cross-platform inference → statistical audit → interpretability analysis, all reproducible from a single `config.yaml`.
+- **Statistical rigour:** bootstrap confidence intervals (B = 2000), Bonferroni multiple-comparison correction, DeLong approximation, symmetric fairness metrics.
+- **Interpretability:** gradient-based token saliency, Jaccard feature stability, clinical vocabulary retention analysis, within-platform split-half reliability.
+- **Fairness-aware evaluation:** disparate impact (with prior-shift correction), equalized odds difference, per-class calibration, five-scheme sensitivity analysis.
+- **Software quality:** PEP 8, type-annotated functions, NumPy docstrings, centralised constants in `utils.py`, config-driven paths and seeds.
+- **Research scope:** 16 analysis scripts, 28+ publication figures, 14 output CSVs, 4 fine-tuned models (~1.7 GB checkpoints).
 
 ---
 
 ## 12. Citation
 
-If you use this code or findings in your research, please cite:
+If you use this code or findings in your work, please cite:
 
 ```bibtex
 @article{pall2025cpfe,
-  title   = {Cross-Platform Fairness Evaluation of Transformer-Based
-             Mental Health Classifiers: A Multi-Model Audit},
+  title   = {Cross-Platform Generalization Failure in Mental Health Natural Language Processing:
+             A Systematic Fairness Audit of Transformer Models on Social Media},
   author  = {Pall, Rajveer Singh and Yadav, Sameer},
   journal = {Journal of Biomedical Informatics},
   year    = {2025},
-  note    = {Under review},
-  url     = {https://github.com/Rajveer-code/mental-health-fairness-nlp}
+  note    = {Under review}
 }
 ```
 
@@ -412,16 +533,6 @@ If you use this code or findings in your research, please cite:
 
 This project is released under the [MIT License](LICENSE).
 
-The datasets used are subject to their own licenses:
-
-| Dataset | License |
-|---|---|
-| Kaggle Mental Health Corpus | Public domain / CC0 |
-| GoEmotions (Google Research) | [Apache 2.0](https://github.com/google-research/google-research/blob/master/LICENSE) |
-| dair-ai/emotion | [MIT](https://huggingface.co/datasets/dair-ai/emotion) |
-
 ---
 
-<div align="center">
-<sub>Submitted to <em>Journal of Biomedical Informatics</em> (JBI) · 2025</sub>
-</div>
+*For questions or issues, please open a GitHub issue at [github.com/Rajveer-code/mental-health-fairness-nlp](https://github.com/Rajveer-code/mental-health-fairness-nlp).*

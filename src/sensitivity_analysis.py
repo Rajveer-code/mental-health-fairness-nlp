@@ -21,7 +21,7 @@ Usage:
 """
 
 import os
-import json
+import importlib.util
 import warnings
 import numpy as np
 import pandas as pd
@@ -401,4 +401,42 @@ if __name__ == "__main__":
     print("\nAll outputs saved to:")
     print(f"  Results: {SENS_DIR}")
     print(f"  Figures: {FIGURES_DIR}")
+
+    # ── Integrate Mappings D and E ────────────────────────────────────────────
+    print("\n" + "="*55)
+    print("Running Mappings D and E (label_sensitivity_mappings_DE.py)...")
+    print("="*55)
+    _de_path = os.path.join(os.path.dirname(__file__),
+                            "label_sensitivity_mappings_DE.py")
+    spec = importlib.util.spec_from_file_location("mapping_de", _de_path)
+    mapping_de = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mapping_de)
+
+    df_D, df_E = mapping_de.run_mapping_DE()
+
+    if not df_D.empty:
+        df_D.to_csv(
+            os.path.join(SENS_DIR, "sensitivity_mapping_D.csv"), index=False
+        )
+        print(f"  Saved: {SENS_DIR}/sensitivity_mapping_D.csv")
+
+    if not df_E.empty:
+        df_E.to_csv(
+            os.path.join(SENS_DIR, "sensitivity_mapping_E.csv"), index=False
+        )
+        print(f"  Saved: {SENS_DIR}/sensitivity_mapping_E.csv")
+
+    existing = mapping_de.load_existing_sensitivity()
+    drop_all  = mapping_de.build_unified_drop_table(df_D, df_E, existing)
+
+    if not drop_all.empty:
+        drop_all.to_csv(
+            os.path.join(SENS_DIR, "sensitivity_drops_all_mappings.csv"),
+            index=False
+        )
+        print(f"  Saved: {SENS_DIR}/sensitivity_drops_all_mappings.csv")
+
+    mapping_de.plot_all_mappings(drop_all)
+    mapping_de.print_paper_text(drop_all)
+
     print("\nNext: paste the sensitivity results into the paper (Section 5.6)")
