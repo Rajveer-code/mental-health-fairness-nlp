@@ -1,0 +1,11 @@
+Table Compilation Summary
+========================================
+Table2     4 rows       Table 2 — Within-Platform Performance (Kaggle test
+Table3     12 rows      Table 3 — Cross-Platform AUC and ECE
+Table4     12 rows      Table 4 — Per-Class F1 Across Platforms
+Table5     12 rows      Table 5 — Pairwise AUC Comparisons (Bonferroni-cor
+Table6     8 rows       Table 6 — Fairness Metrics: Disparate Impact and E
+Table7     8 rows       Table 7 — Temperature Scaling Recalibration Result
+Table8     48 rows      Table 8 — Feature Attribution Stability (Jaccard S
+Table9     20 rows      Table 9 — Label-Mapping Sensitivity Analysis
+Table10    8 rows       Table 10 (NEW) — Calibration Comparison: Temperatu

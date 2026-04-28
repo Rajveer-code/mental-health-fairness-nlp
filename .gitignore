@@ -73,3 +73,14 @@ outputs/logs/
 kaggle.json
 secrets.yaml
 *.key
+
+# ── Source backup files (not part of clean release) ──────────────────────────
+src/preprocess_ORIGINAL.py
+src/preprocess_FIXED_BACKUP.py
+src/rebuild_manuscript.py
+src/finalize_manuscript.py
+src/train_multiseed.py
+
+# ── Manuscript PDFs ────────────────────────────────────────────────────────────
+"CPFE_MentalHealth_NLP (2).pdf"
+CPFE_MentalHealth_NLP.pdf
