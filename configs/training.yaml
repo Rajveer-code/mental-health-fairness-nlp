@@ -1,0 +1,37 @@
+# training.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+# All training hyperparameters for the CPFE study.
+# Values are taken verbatim from Section 4 of the paper.
+# Do NOT override these in analysis scripts — import via utils.load_config().
+# ─────────────────────────────────────────────────────────────────────────────
+
+training:
+  # Optimiser (AdamW — Loshchilov & Hutter 2019)
+  optimizer: adamw
+  learning_rate: 2.0e-5
+  weight_decay: 0.01
+  max_grad_norm: 1.0        # gradient clipping threshold
+
+  # Schedule
+  warmup_ratio: 0.10        # 10% of total steps for linear warmup
+
+  # Epochs & stopping
+  num_epochs: 5
+  early_stopping_metric: macro_f1
+  early_stopping_patience: 5   # no improvement over all 5 epochs → stop
+
+  # Batching & tokenisation
+  batch_size: 16
+  max_seq_length: 64        # Truncation audit (Sec. 5.10): 59.2% Kaggle exceed this
+
+  # Multi-seed protocol (Section 4.5)
+  # All results in Tables 2–10 are means ± SD across these five seeds.
+  seeds:
+    - 42
+    - 0
+    - 1
+    - 7
+    - 123
+
+  # Primary seed (used for single-seed analyses, e.g., fine-tuning Table 9)
+  seed: 42

@@ -1,0 +1,62 @@
+# models.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+# All four transformer models evaluated in the CPFE study (Table 1).
+# HuggingFace model IDs are canonical — scripts must read from here.
+# ─────────────────────────────────────────────────────────────────────────────
+
+models:
+  bert:
+    hf_id: bert-base-uncased
+    display_name: BERT
+    parameters_m: 110
+    pretraining: General (Wikipedia + Books)
+    tokenizer_vocab: 30522   # WordPiece
+    non_independent: false
+
+  roberta:
+    hf_id: roberta-base
+    display_name: RoBERTa
+    parameters_m: 125
+    pretraining: General (dynamic masking, larger mini-batches)
+    tokenizer_vocab: 50265   # BPE
+    non_independent: false
+
+  mentalbert:
+    hf_id: j-hartmann/emotion-english-distilroberta-base
+    display_name: Emotion-DistilRoBERTa
+    parameters_m: 82
+    pretraining: Emotion multi-source corpus (includes GoEmotions)
+    tokenizer_vocab: 50265
+    non_independent: false
+    note: >
+      Pretraining corpus includes GoEmotions as a component.
+      Reddit evaluation results should be treated as partially non-independent
+      (upper bound). See Section 4.1.3 and 7.0.2 of the paper.
+
+  mentalroberta:
+    hf_id: SamLowe/roberta-base-go_emotions
+    display_name: GoEmotions-RoBERTa
+    parameters_m: 125
+    pretraining: GoEmotions corpus (Reddit)
+    tokenizer_vocab: 50265
+    non_independent: true
+    non_independent_platform: reddit
+    note: >
+      Fine-tuned on the full GoEmotions corpus, which is the same source as the
+      Reddit (GoEmotions) cross-platform evaluation set. Reddit results are
+      therefore NON-INDEPENDENT and represent an in-distribution performance
+      ceiling, NOT a cross-platform benchmark. Flagged with † throughout.
+
+# Canonical model ordering for tables and figures
+model_order:
+  - bert
+  - roberta
+  - mentalbert
+  - mentalroberta
+
+# Display colours for figures (not platform colours — those are in config.yaml)
+model_colors:
+  bert: "#1f77b4"
+  roberta: "#ff7f0e"
+  mentalbert: "#2ca02c"
+  mentalroberta: "#d62728"
