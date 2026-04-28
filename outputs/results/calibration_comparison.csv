@@ -1,0 +1,9 @@
+model,model_display,platform,n_cal,n_eval,baseline_auc,baseline_ece,tempscale_temperature,tempscale_ece,tempscale_auc_delta,finetuned_auc,finetuned_ece,ft_auc_gain_vs_baseline,ft_vs_ts_verdict
+bert,BERT,reddit,625,5632,0.6423,0.2328,3.7293,0.0465,-0.0028,0.8189,0.0987,0.1766,Fine-tuning substantially recovers AUC (+0.177); prefer domain adaptation.
+bert,BERT,twitter,286,2597,0.598,0.5003,10.121,0.0326,0.0137,0.7696,0.0742,0.1716,Fine-tuning substantially recovers AUC (+0.172); prefer domain adaptation.
+roberta,RoBERTa,reddit,625,5632,0.634,0.2237,3.586,0.0369,-0.0077,0.8619,0.0818,0.228,Fine-tuning substantially recovers AUC (+0.228); prefer domain adaptation.
+roberta,RoBERTa,twitter,286,2597,0.6063,0.5113,9.1978,0.0065,0.0064,0.8047,0.0614,0.1984,Fine-tuning substantially recovers AUC (+0.198); prefer domain adaptation.
+mentalbert,DistilRoBERTa,reddit,625,5632,0.6806,0.2102,3.1513,0.0328,0.0001,0.8462,0.0821,0.1656,Fine-tuning substantially recovers AUC (+0.166); prefer domain adaptation.
+mentalbert,DistilRoBERTa,twitter,286,2597,0.6105,0.5392,8.6176,0.0434,0.0322,0.9607,0.0187,0.3502,Fine-tuning substantially recovers AUC (+0.350); prefer domain adaptation.
+mentalroberta,SamLowe-RoBERTa,reddit,625,5632,0.7014,0.1983,2.8457,0.0384,-0.0032,0.9251,0.0455,0.2237,Fine-tuning substantially recovers AUC (+0.224); prefer domain adaptation.
+mentalroberta,SamLowe-RoBERTa,twitter,286,2597,0.6077,0.4923,9.0437,0.037,-0.0006,0.8224,0.0939,0.2148,Fine-tuning substantially recovers AUC (+0.215); prefer domain adaptation.
