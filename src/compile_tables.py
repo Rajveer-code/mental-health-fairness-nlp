@@ -21,7 +21,7 @@ manuscript_inputs/fairness/di_eod_table.csv
     From code_A1_di_eod_analysis.py: DI/EOD per class (Table 6).
 
 manuscript_inputs/fairness/temperature_scaling_results.csv
-    From code_A5_temperature_scaling.py [FIXED]: Table 7.
+    From code_A5_temperature_scaling.py: Table 7.
 
 outputs/results/ig_table8_update.csv
     From integrated_gradients.py: Table 8 with IG J column.

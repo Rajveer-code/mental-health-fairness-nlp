@@ -25,7 +25,7 @@ Inputs
 outputs/models/{model}/
     Seed=42 checkpoint.
 outputs/results/{model}_{platform}_predictions.csv
-    Seed=42 predictions with logit columns (from evaluate.py [FIXED]).
+    Seed=42 predictions with logit columns (from evaluate.py).
 data/splits/cross_platform/test_{reddit,twitter}.csv
 
 Outputs
@@ -46,7 +46,7 @@ Run from the repository root:
 
 Dependencies
 ------------
-Requires evaluate.py [FIXED] to have been run (logit columns in prediction CSVs).
+Requires evaluate.py to have been run (logit columns in prediction CSVs).
 Requires outputs/models/{model}/ checkpoints.
 """
 
@@ -380,7 +380,7 @@ def run_calibration_comparison() -> pd.DataFrame:
             missing_logits = [c for c in LOGIT_COLS if c not in pred_df.columns]
             if missing_logits:
                 print(
-                    f"  ERROR: Logit columns missing. Re-run evaluate.py [FIXED].\n"
+                    f"  ERROR: Logit columns missing. Re-run evaluate.py.\n"
                     f"  Missing: {missing_logits}"
                 )
                 continue

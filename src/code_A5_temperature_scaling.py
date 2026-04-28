@@ -80,7 +80,7 @@ LOGIT_COLS = [
 def _load_predictions_with_logits(model_key: str, platform: str) -> pd.DataFrame | None:
     """
     Load prediction CSV and verify it contains raw logit columns.
-    If logit columns are missing the user must re-run evaluate.py [FIXED].
+    If logit columns are missing the user must re-run evaluate.py.
     """
     df = load_predictions(model_key, platform, RESULTS_DIR)
     if df is None:
@@ -91,7 +91,7 @@ def _load_predictions_with_logits(model_key: str, platform: str) -> pd.DataFrame
         print(
             f"\n  ERROR: Logit columns missing in {model_key}_{platform}_predictions.csv\n"
             f"  Missing columns: {missing}\n"
-            f"  You must re-run evaluate.py [FIXED] to generate logit columns.\n"
+            f"  You must re-run evaluate.py to generate logit columns.\n"
             f"  Run: python src/evaluate.py\n"
             f"  Then re-run this script.\n"
         )
