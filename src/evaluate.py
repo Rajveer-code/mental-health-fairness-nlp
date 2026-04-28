@@ -1,23 +1,40 @@
 """
-evaluate.py  [FIXED — v2]
------------
-Evaluates all trained models on three test sets:
+evaluate.py
+───────────
+Evaluates all trained models on three test sets.
+
+Runs inference on:
   1. test_kaggle.csv   — within-platform (same distribution as training)
   2. test_reddit.csv   — cross-platform test 1
   3. test_twitter.csv  — cross-platform test 2
 
-CHANGES FROM ORIGINAL:
-  • run_inference() now also returns raw logits (pre-softmax).
-  • Prediction CSVs now include four extra columns:
-      logit_normal, logit_depression, logit_anxiety, logit_stress
-  These raw logits are required by code_A5_temperature_scaling.py for
-  correct temperature scaling (log(softmax) ≠ logit).
+Saves per-sample prediction CSVs that include both softmax probabilities
+and raw pre-softmax logits. The logit columns are required by
+code_A5_temperature_scaling.py for correct temperature scaling
+(softmax(z/T) ≠ softmax(log(softmax(z))/T)).
 
-Usage:
+Inputs
+------
+data/splits/cross_platform/test_{kaggle,reddit,twitter}.csv
+outputs/models/{model_key}/
+
+Outputs
+-------
+outputs/results/{model_key}_{platform}_predictions.csv
+    Columns: text, label, pred, prob_normal, prob_depression,
+             prob_anxiety, prob_stress, logit_normal,
+             logit_depression, logit_anxiety, logit_stress, correct
+outputs/results/{model_key}_eval.json
+outputs/results/master_results.csv
+
+Usage
+-----
+Run from the repository root:
     python src/evaluate.py
 
-IMPORTANT: You must re-run this script after applying this fix so that
-the prediction CSVs contain the logit columns before running code_A5.
+Dependencies
+------------
+Requires train.py to have been run first (model checkpoints must exist).
 """
 
 import os

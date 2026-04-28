@@ -5,11 +5,11 @@ type: article
 authors:
   - family-names: Pall
     given-names: Rajveer Singh
-    affiliation: "Department of Computer Science and Business Systems, Gyan Ganga Institute of Technology and Sciences, Jabalpur, India"
-    email: rajveer.pall@ggits.org
+    affiliation: "Department of Computer Science and Business Systems, Gyan Ganga Institute of Technology and Sciences, Jabalpur, 482003, India"
+    email: rajveer.singhpall.cb23@ggits.net
   - family-names: Yadav
     given-names: Sameer
-    affiliation: "Department of Computer Science and Business Systems, Gyan Ganga Institute of Technology and Sciences, Jabalpur, India"
+    affiliation: "Department of Computer Science and Business Systems, Gyan Ganga Institute of Technology and Sciences, Jabalpur, 482003, India"
     email: sameer.yadav@ggits.org
 date-released: "2026-04-26"
 journal: "IEEE Transactions on Neural Networks and Learning Systems"

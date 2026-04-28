@@ -220,6 +220,13 @@ def run_di_eod():
         y_pred_ref = ref_df["pred"].values.astype(int)
 
         for tgt_platform in ["reddit", "twitter"]:
+            if model_key == "mentalroberta" and tgt_platform == "reddit":
+                print(
+                    "  WARNING: GoEmotions-RoBERTa Reddit results are NON-INDEPENDENT. "
+                    "This model was fine-tuned on GoEmotions (same source as the Reddit "
+                    "test set). DI/EOD values represent in-distribution performance, "
+                    "not cross-platform fairness. Flagged with † in all tables."
+                )
             tgt_df = load_predictions(model_key, tgt_platform, RESULTS_DIR)
             if tgt_df is None:
                 continue

@@ -1,46 +1,39 @@
 """
-fairness_audit.py  [FIXED — v2]
------------------
-Performs clinical-grade fairness audit on model predictions.
+fairness_audit.py
+─────────────────
+CPFE Axes 1 and 3: discriminative performance audit with DeLong confidence
+intervals and bootstrap-based pairwise significance testing.
 
-CRITICAL FIX FROM ORIGINAL:
-  The original pairwise_auc_comparison() used an incorrect standard error
-  for the macro AUC Z-test.
+Pairwise macro AUC comparison uses bootstrap standard error (B=2000) to
+correctly capture the covariance structure between per-class OvR AUC
+estimates. Because negative sets overlap across classes, averaging
+per-class DeLong SEs would bias the macro-AUC Z-statistic; bootstrap
+resampling of the joint sample avoids this. See Equation derivation in
+Section 4.2.3 of the paper.
 
-  ORIGINAL (WRONG):
-    auc_se = average of per-class DeLong SEs
-    Z = |AUC1 - AUC2| / sqrt(se1^2 + se2^2)
+Inputs
+------
+outputs/results/{model}_{platform}_predictions.csv
+    Per-sample predictions: label, pred, prob_*, correct.
 
-  WHY IT'S WRONG:
-    Macro AUC = (1/K) * sum(AUC_k).
-    Var(macro AUC) = (1/K^2) * [sum Var(AUC_k) + 2 * sum_{j<k} Cov(AUC_j, AUC_k)]
-    The covariance terms between per-class AUC estimates are non-zero
-    because negative sets overlap (a "normal" sample is in the negative
-    set for BOTH depression AUC and anxiety AUC).  Averaging the per-class
-    SEs ignores all covariance terms, biasing the SE and Z-statistic.
+Outputs
+-------
+outputs/results/fairness/fairness_audit_full.csv
+outputs/results/fairness/pairwise_auc_comparisons.csv
+outputs/results/fairness/between_model_auc_{reddit,twitter}.csv
+outputs/figures/figure1_forest_plot.png
+outputs/figures/figure2_platform_degradation.png
+outputs/figures/figure3_calibration_curves.png
+outputs/figures/figure4_f1_heatmap.png
 
-  FIX:
-    Use bootstrap SE of macro AUC directly.  Bootstrap naturally captures
-    the full covariance structure between per-class AUC estimates because
-    it resamples the joint sample, not each class independently.
+Usage
+-----
+Run from the repository root:
+    python src/fairness_audit.py
 
-    Z = |AUC1 - AUC2| / sqrt(SE_boot(AUC1)^2 + SE_boot(AUC2)^2)
-
-    Because the two test sets are INDEPENDENT (different platforms),
-    SE_boot(difference) = sqrt(SE_boot(AUC1)^2 + SE_boot(AUC2)^2).
-
-    Bootstrap SEs are precomputed once per model×platform (cached) and
-    reused across all pairs to avoid redundant computation.
-
-IMPORTANT: The per-class AUC DeLong CIs (delong_auc_ci, multiclass_auc_ci)
-    are NOT changed — those are binary AUC CIs and are correctly implemented.
-    Only the pairwise macro AUC Z-test is fixed.
-
-Runtime note: pairwise_auc_comparison() now runs B=2000 bootstrap
-    resamples × 12 model×platform combinations = 24,000 AUC computations.
-    Expected time: 3–8 minutes depending on hardware.
-
-All other functions are unchanged from the original.
+Dependencies
+------------
+Requires evaluate.py to have been run first.
 """
 
 import os
@@ -706,7 +699,7 @@ def plot_heatmap(audit_results):
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    print("Starting fairness audit (FIXED — bootstrap SE for pairwise test)...")
+    print("Starting CPFE fairness audit (bootstrap SE for pairwise AUC test)...")
     print(f"Alpha: {ALPHA} | Bonferroni-corrected for "
           f"{len(list(combinations(PLATFORMS, 2)))} comparisons per model")
 
@@ -717,6 +710,13 @@ def main():
         print(f"\n[{model_key.upper()}]")
         for platform in PLATFORMS:
             print(f"  Auditing: {platform}")
+            if model_key == "mentalroberta" and platform == "reddit":
+                print(
+                    "  WARNING: GoEmotions-RoBERTa Reddit results are NON-INDEPENDENT. "
+                    "This model was fine-tuned on GoEmotions (same source as the Reddit "
+                    "test set). Results represent an in-distribution ceiling, not a "
+                    "cross-platform benchmark. Flagged with † in all tables."
+                )
             res = audit_model_platform(model_key, platform)
             if res is None:
                 continue
@@ -754,8 +754,7 @@ def main():
         os.path.join(FAIRNESS_DIR, "fairness_audit_full.csv"), index=False
     )
 
-    # ── FIXED: Pairwise test uses bootstrap SE ──────────────────────────────
-    print("\nRunning pairwise AUC comparisons (Bonferroni corrected — bootstrap SE)...")
+    print("\nRunning pairwise AUC comparisons (Bonferroni corrected, bootstrap SE)...")
     print("This step takes 3–8 minutes. Please wait.")
     pairwise_df = pairwise_auc_comparison(RESULTS_DIR, n_boots=2000)
     pairwise_df.to_csv(

@@ -1,16 +1,41 @@
 """
 preprocess.py
--------------
-Loads, cleans, and prepares all datasets for training and fairness audit.
-Saves processed splits to data/splits/
+─────────────
+Load, clean, and split all datasets for the CPFE cross-platform study.
 
-Datasets:
-  1. Kaggle Mental Health (primary)   - 53K samples, 7 mental health classes
-  2. GoEmotions Reddit (cross-platform validation) - 54K, remapped to 4 classes
-  3. dair-ai/emotion Twitter (cross-platform)      - 20K, remapped to 4 classes
+Processes three datasets into a unified 4-class schema (normal, depression,
+anxiety, stress), applies text cleaning, infers keyword-based demographic
+proxies, and writes stratified 70/15/15 splits. The canonical cross-platform
+evaluation setup (train on Kaggle, test on Reddit and Twitter) is produced
+by ``create_cross_platform_splits()``. Label remappings are canonical for
+this codebase — do not redefine elsewhere.
+
+Inputs
+------
+data/raw/kaggle_mental_health/Combined Data.csv
+    Sarkar (2022) combined mental health corpus.
+data/raw/reddit_goemotions/
+    Demszky et al. (2020) GoEmotions HuggingFace DatasetDict.
+data/raw/twitter_emotion/
+    Saravia et al. (2018) dair-ai/emotion HuggingFace DatasetDict.
+
+Outputs
+-------
+data/splits/{kaggle,reddit,twitter,combined}/{train,val,test}.csv
+data/splits/cross_platform/{train,val,test_kaggle,test_reddit,test_twitter}.csv
+
+Usage
+-----
+Run from the repository root:
+    python src/preprocess.py
+
+Dependencies
+------------
+datasets, scikit-learn, pandas, numpy, pyyaml
 """
 
 import os
+import random
 import re
 import yaml
 import pandas as pd
@@ -24,6 +49,7 @@ with open("configs/config.yaml", "r") as f:
     cfg = yaml.safe_load(f)
 
 SEED = cfg["training"]["seed"]
+random.seed(SEED)
 np.random.seed(SEED)
 
 # ── Label maps ────────────────────────────────────────────────────────────────

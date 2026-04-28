@@ -1,33 +1,34 @@
 """
-code_A5_temperature_scaling.py  [FIXED — v2]
+code_A5_temperature_scaling.py
 ──────────────────────────────
-Implements platform-specific temperature scaling recalibration (A5).
+CPFE Axis 2: platform-specific temperature scaling recalibration.
 
-CRITICAL FIX FROM ORIGINAL:
-  The original script reconstructed logits from softmax probabilities via
-  log(p), which is mathematically WRONG for temperature scaling.
+Temperature T is optimised by minimising NLL on a 10% stratified
+calibration split drawn from each deployment platform, then applied
+to the remaining 90% evaluation split. Operates on raw pre-softmax
+logits (columns logit_* in prediction CSVs), not softmax probabilities:
+    p_T = softmax(z / T)
+This is the correct implementation per Guo et al. (2017).
 
-  Correct temperature scaling is defined on PRE-SOFTMAX logits z:
-      p_T = softmax(z / T)
+Inputs
+------
+outputs/results/{model}_{platform}_predictions.csv
+    Must include logit_normal, logit_depression, logit_anxiety,
+    logit_stress columns (written by evaluate.py).
 
-  log(softmax(z)) = z - log(Z) where Z = sum(exp(z)).
-  Dividing log(p) by T and applying softmax gives:
-      softmax(log(p) / T) = softmax((z - log(Z)) / T)
-  which is NOT the same as softmax(z / T).
+Outputs
+-------
+outputs/results/fairness/temperature_scaling_results.csv
+outputs/figures/figure_recalibration.png
 
-  This fix uses the raw logit columns (logit_normal, logit_depression,
-  logit_anxiety, logit_stress) that evaluate.py [FIXED] now saves in
-  every prediction CSV.
-
-  PREREQUISITE: Re-run evaluate.py [FIXED] before this script so that
-  the prediction CSVs contain the logit columns.
-
-Outputs:
-  outputs/results/fairness/temperature_scaling_results.csv
-  outputs/figures/figure_recalibration.png
-
-Run from repo root:
+Usage
+-----
+Run from the repository root:
     python src/code_A5_temperature_scaling.py
+
+Dependencies
+------------
+Requires evaluate.py to have been run first.
 """
 
 import os
@@ -41,6 +42,7 @@ import matplotlib.pyplot as plt
 from scipy.special import softmax as sp_softmax
 from scipy.optimize import minimize_scalar
 from sklearn.metrics import log_loss
+from sklearn.model_selection import train_test_split
 
 from utils import (
     MODELS, MODEL_DISPLAY, PROB_COLS,
@@ -153,11 +155,14 @@ def run_temperature_scaling() -> pd.DataFrame:
             labels = df["label"].values.astype(int)
 
             # ── Stratified calibration split (10% cal, 90% eval) ──────────
-            # Stratify by label to avoid empty-class issues in small cal sets.
-            n_cal = max(4, int(n * CAL_FRAC))  # at least 4 samples (1 per class)
-            idx_all = rng.permutation(n)
-            idx_cal  = idx_all[:n_cal]
-            idx_eval = idx_all[n_cal:]
+            # Stratify by label so every class is represented in the cal set,
+            # which is critical for calibration on minority classes.
+            idx_cal, idx_eval = train_test_split(
+                np.arange(n),
+                test_size=1.0 - CAL_FRAC,
+                stratify=labels,
+                random_state=SEED,
+            )
 
             logits_cal  = logits[idx_cal];  labels_cal  = labels[idx_cal]
             logits_eval = logits[idx_eval]; labels_eval = labels[idx_eval]
@@ -200,7 +205,6 @@ def run_temperature_scaling() -> pd.DataFrame:
                 "auc_before":         round(auc_before, 4),
                 "auc_after":          round(auc_after, 4),
                 "auc_change":         auc_change,
-                "logits_source":      "raw_logits_from_model",   # audit trail
             })
 
     return pd.DataFrame(rows)
@@ -264,7 +268,7 @@ def plot_recalibration(df: pd.DataFrame):
         ax.axhline(0.10, color="gray", linestyle=":", alpha=0.6, linewidth=1)
         ax.set_title(
             f"Recalibration — {platform.capitalize()}\n"
-            f"T* optimised on actual model logits (correct implementation)",
+            f"T* optimised on raw pre-softmax logits (10% stratified cal split)",
             fontweight="bold"
         )
 
@@ -273,7 +277,7 @@ def plot_recalibration(df: pd.DataFrame):
         ax.legend(h1 + h2, l1 + l2, loc="upper right", fontsize=7.5)
 
     fig.suptitle(
-        "Temperature Scaling Recalibration — Results Using Correct Raw Logits\n"
+        "Temperature Scaling Recalibration (Equation 6)\n"
         "T* fitted on 10% stratified calibration split from each deployment platform",
         fontsize=11, fontweight="bold"
     )
@@ -293,7 +297,7 @@ def print_paper_summary(df: pd.DataFrame):
     avg_auc_change   = df["auc_change"].mean()
 
     print(f"\n{'='*65}")
-    print("PAPER TEXT (§5.6) — paste into manuscript, replacing original paragraph")
+    print("TEMPERATURE SCALING SUMMARY (Section 5.6)")
     print(f"{'='*65}")
     print(f"""
 We validated platform-specific temperature scaling as a post-hoc
@@ -324,17 +328,17 @@ discriminative performance recovery.
 # ── Entry Point ───────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("A5: Temperature Scaling Recalibration — FIXED (raw logits)")
+    print("A5: Temperature Scaling Recalibration")
     print("=" * 60)
-    print("Prerequisite check: prediction CSVs must contain logit columns.")
-    print("If this script fails, re-run:  python src/evaluate.py  [FIXED version]")
+    print("Prerequisite: prediction CSVs must contain logit columns.")
+    print("If logit columns are missing, re-run: python src/evaluate.py")
     print("=" * 60)
 
     df = run_temperature_scaling()
 
     if df.empty:
         print("\nERROR: No prediction files found or logit columns missing.")
-        print("Re-run python src/evaluate.py [FIXED] first.")
+        print("Re-run python src/evaluate.py first to generate logit columns.")
         sys.exit(1)
 
     out_csv = os.path.join(FAIRNESS_DIR, "temperature_scaling_results.csv")
@@ -345,7 +349,4 @@ if __name__ == "__main__":
     print_paper_summary(df)
 
     print(f"\n{'='*60}")
-    print("DONE.")
-    print("These results replace §5.6 in the manuscript.")
-    print("The key claim (AUC unchanged by temperature scaling) is preserved.")
-    print("ECE reduction numbers may differ from the original (log-prob) version.")
+    print("DONE. Temperature scaling results saved.")

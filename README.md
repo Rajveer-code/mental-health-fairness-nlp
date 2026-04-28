@@ -394,9 +394,9 @@ Sarkar (2022) for the Kaggle Combined Mental Health corpus.
 
 ## Contact
 
-**Rajveer Singh Pall** — [rajveer.pall@ggits.org](mailto:rajveer.pall@ggits.org)
+**Rajveer Singh Pall** — [rajveer.singhpall.cb23@ggits.net](mailto:rajveer.singhpall.cb23@ggits.net)
 
 **Sameer Yadav** — [sameer.yadav@ggits.org](mailto:sameer.yadav@ggits.org)
 
 Department of Computer Science and Business Systems,
-Gyan Ganga Institute of Technology and Sciences, Jabalpur, India
+Gyan Ganga Institute of Technology and Sciences, Jabalpur, 482003, India

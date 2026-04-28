@@ -1,18 +1,30 @@
 """
-perclass_ece_analysis.py  [FIXED — v2]
-─────────────────────────
-Adds per-class ECE (one-vs-rest) to the fairness audit.
+perclass_ece_analysis.py
+────────────────────────
+Per-class Expected Calibration Error (one-vs-rest) with 95% bootstrap CIs.
 
-CRITICAL FIX FROM ORIGINAL:
-  The original script used n_boots=200 for bootstrap CI estimation.
-  The manuscript states "ECE 95% bootstrap confidence intervals (B=1000)"
-  in Table 3.  This fix sets n_boots=1000 everywhere, making the code
-  consistent with the manuscript claim.
+Implements Equation 5b from the paper: for each class c, bin membership
+is based on P(class=c) and accuracy is 1{y_i = c}, using M=10 equal-width
+bins. B=1000 bootstrap resamples for 95% CIs (consistent with Table 3).
 
-  The runtime increase is modest: 200 → 1000 boots is ~5× slower per
-  call but total wall time is still well under 5 minutes.
+Inputs
+------
+outputs/results/{model}_{platform}_predictions.csv
+    Per-sample predictions with columns: label, pred, prob_*, correct.
 
-All other logic is unchanged.
+Outputs
+-------
+outputs/results/fairness/perclass_ece.csv
+outputs/figures/figure_perclass_ece_heatmap.png
+
+Usage
+-----
+Run from the repository root:
+    python src/perclass_ece_analysis.py
+
+Dependencies
+------------
+Requires evaluate.py to have been run first.
 """
 
 import os
@@ -41,8 +53,7 @@ os.makedirs(FIGURES_DIR,  exist_ok=True)
 
 ECE_BINS = cfg["fairness"]["ece_bins"]   # 10
 
-# FIXED: n_boots=1000 throughout (was 200 in original)
-N_BOOTS = 1000
+N_BOOTS = 1000   # B=1000 bootstrap resamples — matches Table 3 manuscript claim
 
 
 def compute_perclass_ece(probs: np.ndarray, labels: np.ndarray,

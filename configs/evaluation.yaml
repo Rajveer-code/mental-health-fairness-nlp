@@ -10,12 +10,12 @@ calibration:
   ece_bin_type: equal_width   # equal-frequency binning is NOT used
 
   # Bootstrap CI for ECE point estimates (Section 4.2.2)
-  bootstrap_ece_samples: 1000
+  bootstrap_ci_samples: 1000
 
 significance:
   # Pairwise macro-AUC bootstrap Z-tests (Section 4.2.3)
   # B = 2,000 resamples of the full test set to estimate SE(macro-AUC)
-  bootstrap_auc_samples: 2000
+  bootstrap_significance_samples: 2000
 
   # Bonferroni correction: 3 pairwise platform comparisons per model
   # (Kaggle vs Reddit, Kaggle vs Twitter, Reddit vs Twitter)
@@ -33,10 +33,10 @@ fairness:
 
 attribution:
   # Gradient-based saliency (Captum) — Equation 4 in the paper
-  n_samples_per_platform: 200   # texts sampled per platform for attribution
+  attribution_n_samples: 200   # texts sampled per platform for attribution
 
   # Jaccard similarity reported at K ∈ {5, 10, 15, 20} — Equation 5
-  jaccard_k_values:
+  attribution_k_values:
     - 5
     - 10
     - 15
@@ -44,7 +44,7 @@ attribution:
 
 temperature_scaling:
   # Calibration split: 10% of target-platform test set, stratified by label
-  calibration_split: 0.10      # n≈626 for Reddit; n≈288 for Twitter
+  temperature_calibration_split: 0.10   # n≈626 for Reddit; n≈288 for Twitter
 
   # Temperature optimisation bounds
   temperature_min: 0.1

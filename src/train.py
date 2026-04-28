@@ -34,6 +34,7 @@ Requires preprocess.py to have been run first.
 
 import os
 import json
+import random
 import time
 import argparse
 import yaml
@@ -48,6 +49,7 @@ from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
     get_linear_schedule_with_warmup,
+    set_seed as transformers_set_seed,
 )
 from sklearn.metrics import (
     accuracy_score,
@@ -63,8 +65,18 @@ with open("configs/config.yaml", "r") as f:
     cfg = yaml.safe_load(f)
 
 SEED = cfg["training"]["seed"]
-torch.manual_seed(SEED)
-np.random.seed(SEED)
+
+
+def set_all_seeds(s: int) -> None:
+    """Set all random states for full reproducibility across Python, NumPy, and PyTorch."""
+    random.seed(s)
+    np.random.seed(s)
+    torch.manual_seed(s)
+    torch.cuda.manual_seed_all(s)
+    transformers_set_seed(s)
+
+
+set_all_seeds(SEED)
 
 MODEL_REGISTRY = {
     "bert":          cfg["models"]["bert"],
@@ -82,8 +94,6 @@ EPOCHS      = cfg["training"]["epochs"]
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# FIX 1: Removed unsupported expandable_segments env var (caused UserWarning on Windows)
-# FIX 2: Updated GradScaler to non-deprecated API
 torch.cuda.empty_cache()
 scaler = torch.amp.GradScaler("cuda") if DEVICE.type == "cuda" else None
 
@@ -176,7 +186,6 @@ def train_epoch(model, loader, optimizer, scheduler):
         labels         = batch["label"].to(DEVICE)
 
         if scaler is not None:
-            # FIX 3: Updated autocast to non-deprecated API
             with torch.amp.autocast("cuda"):
                 outputs = model(
                     input_ids=input_ids,
@@ -263,8 +272,7 @@ def train_model(model_key: str, seed: int | None = None) -> float:
         Best validation macro F1 achieved across all epochs.
     """
     effective_seed = seed if seed is not None else SEED
-    torch.manual_seed(effective_seed)
-    np.random.seed(effective_seed)
+    set_all_seeds(effective_seed)
 
     torch.set_num_threads(4)
     if DEVICE.type == "cuda":
@@ -289,14 +297,11 @@ def train_model(model_key: str, seed: int | None = None) -> float:
     train_dataset = MentalHealthDataset(train_df, tokenizer, MAX_LEN)
     val_dataset   = MentalHealthDataset(val_df,   tokenizer, MAX_LEN)
 
-    # FIX 4: pin_memory=True for faster CPU→GPU transfers
-    # NOTE: If you want to increase speed further, raise batch_size in config.yaml
-    #       Try 32 first; go to 64 if no OOM on your RTX 4060 8GB.
     train_loader = DataLoader(
         train_dataset,
         batch_size=BATCH_SIZE,
         shuffle=True,
-        num_workers=0,       # keep 0 on Windows — multiprocessing broken in MINGW64
+        num_workers=0,       # 0 avoids multiprocessing pickling issues on Windows
         pin_memory=True,     # faster host→device transfers
     )
     val_loader = DataLoader(
@@ -309,9 +314,6 @@ def train_model(model_key: str, seed: int | None = None) -> float:
 
     # ── Model ──
     print(f"Loading model: {model_name}")
-    # NOTE: The LOAD REPORT (UNEXPECTED/MISSING keys) printed by HuggingFace is normal.
-    # UNEXPECTED = pre-training heads (MLM, NSP) being discarded → expected.
-    # MISSING    = new classification head being randomly init'd  → expected.
     model = AutoModelForSequenceClassification.from_pretrained(
         model_name,
         num_labels=NUM_LABELS,

@@ -68,6 +68,12 @@ CPFE_MentalHealth_NLP_JBI_FINAL.docx
 outputs/logits/
 outputs/logs/
 
+# ── Git tooling artifacts ─────────────────────────────────────────────────────
+mailmap.txt
+
+# ── Model checkpoint directories ─────────────────────────────────────────────
+outputs/checkpoints/
+
 # ── Sensitive credentials ────────────────────────────────────────────────────
 .env
 kaggle.json
