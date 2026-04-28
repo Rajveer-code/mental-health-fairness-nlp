@@ -1,0 +1,53 @@
+# evaluation.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+# All evaluation and statistical-testing hyperparameters for the CPFE study.
+# Values are taken verbatim from Section 4.2 of the paper.
+# ─────────────────────────────────────────────────────────────────────────────
+
+calibration:
+  # Expected Calibration Error — Equation 1 in the paper
+  ece_bins: 10
+  ece_bin_type: equal_width   # equal-frequency binning is NOT used
+
+  # Bootstrap CI for ECE point estimates (Section 4.2.2)
+  bootstrap_ece_samples: 1000
+
+significance:
+  # Pairwise macro-AUC bootstrap Z-tests (Section 4.2.3)
+  # B = 2,000 resamples of the full test set to estimate SE(macro-AUC)
+  bootstrap_auc_samples: 2000
+
+  # Bonferroni correction: 3 pairwise platform comparisons per model
+  # (Kaggle vs Reddit, Kaggle vs Twitter, Reddit vs Twitter)
+  bonferroni_n_comparisons: 3
+  bonferroni_alpha: 0.05
+  bonferroni_corrected_alpha: 0.0167   # 0.05 / 3
+
+fairness:
+  # DI threshold: <0.80 = four-fifths rule violation; <0.50 = severe disparity
+  di_threshold_mild: 0.80
+  di_threshold_severe: 0.50
+
+  # EOD = 0 indicates perfect equalized odds; report absolute value only
+  eod_reference_platform: kaggle
+
+attribution:
+  # Gradient-based saliency (Captum) — Equation 4 in the paper
+  n_samples_per_platform: 200   # texts sampled per platform for attribution
+
+  # Jaccard similarity reported at K ∈ {5, 10, 15, 20} — Equation 5
+  jaccard_k_values:
+    - 5
+    - 10
+    - 15
+    - 20
+
+temperature_scaling:
+  # Calibration split: 10% of target-platform test set, stratified by label
+  calibration_split: 0.10      # n≈626 for Reddit; n≈288 for Twitter
+
+  # Temperature optimisation bounds
+  temperature_min: 0.1
+  temperature_max: 20.0
+  temperature_optimiser: bounded_minimisation   # scipy.minimize_scalar, method='bounded'
+  temperature_loss: nll   # negative log-likelihood on raw logits (NOT softmax probs)

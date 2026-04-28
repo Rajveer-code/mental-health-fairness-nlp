@@ -8,18 +8,39 @@ training:
   max_length: 64
   batch_size: 16
   learning_rate: 2.0e-5
+  weight_decay: 0.01          # AdamW decoupled weight decay (Section 4)
+  warmup_ratio: 0.10           # linear warmup over 10% of total steps
+  max_grad_norm: 1.0           # gradient clipping (Section 4)
   epochs: 5
-  seed: 42
+  early_stopping_metric: macro_f1
+  seed: 42                     # primary seed; multi-seed list in training.yaml
+  seeds: [42, 0, 1, 7, 123]   # Section 4.5 multi-seed protocol
+  optimizer: adamw
 
 fairness:
   alpha: 0.05
+  bonferroni_n_comparisons: 3
+  bonferroni_corrected_alpha: 0.0167
   min_group_size: 100
   ece_bins: 10
+  di_threshold_mild: 0.80
+  di_threshold_severe: 0.50
+
+attribution:
+  n_samples: 200
+  jaccard_k_values: [5, 10, 15, 20]
+
+temperature_scaling:
+  calibration_split: 0.10
 
 paths:
   raw_data: "data/raw/"
   processed: "data/processed/"
   splits: "data/splits/"
+  cross_platform: "data/splits/cross_platform/"
   models: "outputs/models/"
   results: "outputs/results/"
+  fairness: "outputs/results/fairness/"
+  attribution: "outputs/results/attribution/"
+  shap: "outputs/results/shap/"
   figures: "outputs/figures/"

@@ -1,0 +1,49 @@
+model,model_display,class_name,pair,k,jaccard_gradsal_k10,jaccard_ig_k10,agreement
+bert,BERT,normal,kaggle→reddit,10,0.0,0.0,Consistent (both near-zero)
+bert,BERT,normal,kaggle→twitter,10,0.0526,0.0,Consistent (both near-zero)
+bert,BERT,normal,reddit→twitter,10,0.0526,0.0,Consistent (both near-zero)
+bert,BERT,depression,kaggle→reddit,10,0.0526,0.0,Consistent (both near-zero)
+bert,BERT,depression,kaggle→twitter,10,0.0,0.0,Consistent (both near-zero)
+bert,BERT,depression,reddit→twitter,10,0.0526,0.0,Consistent (both near-zero)
+bert,BERT,anxiety,kaggle→reddit,10,0.0,0.0526,Consistent (both near-zero)
+bert,BERT,anxiety,kaggle→twitter,10,0.0,0.1111,Disagree
+bert,BERT,anxiety,reddit→twitter,10,0.0526,0.0,Consistent (both near-zero)
+bert,BERT,stress,kaggle→reddit,10,0.0,0.0,Consistent (both near-zero)
+bert,BERT,stress,kaggle→twitter,10,0.0,0.0526,Consistent (both near-zero)
+bert,BERT,stress,reddit→twitter,10,0.1111,0.0,Disagree
+roberta,RoBERTa,normal,kaggle→reddit,10,0.0526,0.0526,Consistent (both near-zero)
+roberta,RoBERTa,normal,kaggle→twitter,10,0.1111,0.0,Disagree
+roberta,RoBERTa,normal,reddit→twitter,10,0.1111,0.0,Disagree
+roberta,RoBERTa,depression,kaggle→reddit,10,0.0,0.0,Consistent (both near-zero)
+roberta,RoBERTa,depression,kaggle→twitter,10,0.0,0.0,Consistent (both near-zero)
+roberta,RoBERTa,depression,reddit→twitter,10,0.0526,0.0,Consistent (both near-zero)
+roberta,RoBERTa,anxiety,kaggle→reddit,10,0.1765,0.1111,Consistent (both high)
+roberta,RoBERTa,anxiety,kaggle→twitter,10,0.0,0.1111,Disagree
+roberta,RoBERTa,anxiety,reddit→twitter,10,0.1111,0.0,Disagree
+roberta,RoBERTa,stress,kaggle→reddit,10,0.0,0.0,Consistent (both near-zero)
+roberta,RoBERTa,stress,kaggle→twitter,10,0.0,0.0526,Consistent (both near-zero)
+roberta,RoBERTa,stress,reddit→twitter,10,0.1111,0.0526,Disagree
+mentalbert,DistilRoBERTa,normal,kaggle→reddit,10,0.0526,0.0526,Consistent (both near-zero)
+mentalbert,DistilRoBERTa,normal,kaggle→twitter,10,0.1111,0.0,Disagree
+mentalbert,DistilRoBERTa,normal,reddit→twitter,10,0.0526,0.0,Consistent (both near-zero)
+mentalbert,DistilRoBERTa,depression,kaggle→reddit,10,0.0526,0.0,Consistent (both near-zero)
+mentalbert,DistilRoBERTa,depression,kaggle→twitter,10,0.0,0.0,Consistent (both near-zero)
+mentalbert,DistilRoBERTa,depression,reddit→twitter,10,0.0,0.0,Consistent (both near-zero)
+mentalbert,DistilRoBERTa,anxiety,kaggle→reddit,10,0.0,0.1111,Disagree
+mentalbert,DistilRoBERTa,anxiety,kaggle→twitter,10,0.0,0.1765,Disagree
+mentalbert,DistilRoBERTa,anxiety,reddit→twitter,10,0.0,0.0,Consistent (both near-zero)
+mentalbert,DistilRoBERTa,stress,kaggle→reddit,10,0.0526,0.0526,Consistent (both near-zero)
+mentalbert,DistilRoBERTa,stress,kaggle→twitter,10,0.0,0.0526,Consistent (both near-zero)
+mentalbert,DistilRoBERTa,stress,reddit→twitter,10,0.0526,0.0,Consistent (both near-zero)
+mentalroberta,SamLowe-RoBERTa,normal,kaggle→reddit,10,0.0526,0.0,Consistent (both near-zero)
+mentalroberta,SamLowe-RoBERTa,normal,kaggle→twitter,10,0.0,0.0,Consistent (both near-zero)
+mentalroberta,SamLowe-RoBERTa,normal,reddit→twitter,10,0.1111,0.0526,Disagree
+mentalroberta,SamLowe-RoBERTa,depression,kaggle→reddit,10,0.0,0.0,Consistent (both near-zero)
+mentalroberta,SamLowe-RoBERTa,depression,kaggle→twitter,10,0.0,0.0,Consistent (both near-zero)
+mentalroberta,SamLowe-RoBERTa,depression,reddit→twitter,10,0.1111,0.0,Disagree
+mentalroberta,SamLowe-RoBERTa,anxiety,kaggle→reddit,10,0.0,0.1111,Disagree
+mentalroberta,SamLowe-RoBERTa,anxiety,kaggle→twitter,10,0.0,0.1765,Disagree
+mentalroberta,SamLowe-RoBERTa,anxiety,reddit→twitter,10,0.1111,0.0,Disagree
+mentalroberta,SamLowe-RoBERTa,stress,kaggle→reddit,10,0.0526,0.0,Consistent (both near-zero)
+mentalroberta,SamLowe-RoBERTa,stress,kaggle→twitter,10,0.0,0.0526,Consistent (both near-zero)
+mentalroberta,SamLowe-RoBERTa,stress,reddit→twitter,10,0.0526,0.0526,Consistent (both near-zero)

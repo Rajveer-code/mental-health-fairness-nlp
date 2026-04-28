@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this code or results, please cite our paper."
+title: "Cross-Platform Generalisation Failure in Mental Health Natural Language Processing: A Five-Axis Fairness Audit of Transformer Models on Social Media"
+type: article
+authors:
+  - family-names: Pall
+    given-names: Rajveer Singh
+    affiliation: "Department of Computer Science and Business Systems, Gyan Ganga Institute of Technology and Sciences, Jabalpur, India"
+    email: rajveer.pall@ggits.org
+  - family-names: Yadav
+    given-names: Sameer
+    affiliation: "Department of Computer Science and Business Systems, Gyan Ganga Institute of Technology and Sciences, Jabalpur, India"
+    email: sameer.yadav@ggits.org
+date-released: "2026-04-26"
+journal: "IEEE Transactions on Neural Networks and Learning Systems"
+year: 2026
+repository-code: "https://github.com/Rajveer-code/mental-health-fairness-nlp"
+abstract: >
+  We introduce the Cross-Platform Fairness Evaluation (CPFE) framework — a
+  five-axis audit protocol covering discriminative performance, calibration,
+  statistical significance, prediction equity, and attribution stability —
+  and apply it to four transformer models (BERT, RoBERTa, Emotion-DistilRoBERTa,
+  GoEmotions-RoBERTa) trained on a Kaggle mental health corpus (n=35,556) and
+  evaluated on Reddit (n=6,257) and Twitter (n=2,883) test sets.
+keywords:
+  - mental health NLP
+  - cross-platform generalisation
+  - fairness audit
+  - transformer models
+  - calibration
+  - disparate impact
+  - attribution stability
+  - social media
+license: MIT
