@@ -54,3 +54,22 @@ Thumbs.db
 # ── Logs and temp ─────────────────────────────────────────────────────────────
 *.log
 *.tmp
+
+# ── Large manuscript drafts (not part of reproducible code release) ───────────
+*.docx
+*.xlsx
+CPFE_submission_ready.docx
+CPFE_cover_letter.docx
+CPFE_MentalHealth_NLP_JBI_FINAL.docx
+"CPFE_Manuscript_SUBMISSION_READY_1 (1).docx"
+"CPFE_MentalHealth_NLP (2).pdf"
+
+# ── Logits and pre-computed prediction files (large; regenerate with scripts) ──
+outputs/logits/
+outputs/logs/
+
+# ── Sensitive credentials ────────────────────────────────────────────────────
+.env
+kaggle.json
+secrets.yaml
+*.key
